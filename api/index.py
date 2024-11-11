@@ -1,7 +1,9 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response, render_template, redirect, url_for
 import hmac
 import hashlib
 import os
+import requests
+import json
 
 app = Flask(__name__)
 
@@ -65,3 +67,35 @@ def handle_post_change(value):
     verb = value.get('verb')  # add, edit, delete
     
     print(f"Post {post_id} was {verb}ed")
+
+@app.route('/test')
+def test_page():
+    return render_template('test.html')
+
+@app.route('/test/post', methods=['POST'])
+def test_post():
+    page_id = request.form.get('page_id')
+    access_token = request.form.get('access_token')
+    message = request.form.get('message')
+    
+    try:
+        # Endpoint de l'API Facebook
+        url = f'https://graph.facebook.com/v18.0/{page_id}/feed'
+        
+        # Données du post
+        data = {
+            'message': message,
+            'access_token': access_token
+        }
+        
+        # Envoi de la requête à Facebook
+        response = requests.post(url, data=data)
+        response_data = response.json()
+        
+        # Formatage de la réponse pour l'affichage
+        formatted_response = json.dumps(response_data, indent=2)
+        
+        return render_template('test.html', response=formatted_response)
+        
+    except Exception as e:
+        return render_template('test.html', response=str(e))
