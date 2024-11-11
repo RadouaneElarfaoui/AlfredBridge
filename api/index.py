@@ -33,7 +33,7 @@ def webhook_verify():
 
 @app.route('/webhook', methods=['POST'])
 def webhook_handle():
-    app_secret = os.environ.get('FB_APP_SECRET')
+    app_secret = os.environ.get('FB_APP_SECRET', '850a30f1853fc82acb62c6ec9c875a0b')
     
     signature = request.headers.get('X-Hub-Signature-256')
     if not signature:
