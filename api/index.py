@@ -15,9 +15,9 @@ def about():
 
 @app.route('/webhook', methods=['GET'])
 def webhook_verify():
-    VERIFY_TOKEN = os.environ.get('FB_VERIFY_TOKEN', 'your_verify_token')
+    VERIFY_TOKEN = os.environ.get('FB_VERIFY_TOKEN', 'arf')
     print(VERIFY_TOKEN)
-    
+
     
     mode = request.args.get('hub.mode')
     token = request.args.get('hub.verify_token')
