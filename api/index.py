@@ -9,7 +9,7 @@ from collections import deque
 from typing import Dict, Deque
 import time
 import uuid
-from config import config
+from .config import config
 
 app = Flask(__name__)
 
