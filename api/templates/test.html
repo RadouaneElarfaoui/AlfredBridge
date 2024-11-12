@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Facebook Post Tester</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.2/jsoneditor.min.css" rel="stylesheet" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.10.2/jsoneditor.min.js"></script>
     <style>
         body { 
             max-width: 800px; 
@@ -16,7 +18,7 @@
             display: block;
             margin-bottom: 5px;
         }
-        input[type="text"], textarea {
+        input[type="text"] {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -35,11 +37,15 @@
             border: 1px solid #ddd;
             border-radius: 5px;
         }
+        .editor-container {
+            height: 400px;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>Facebook Post Tester</h1>
-    <form method="POST" action="/test/post">
+    <form method="POST" action="/test/post" id="postForm">
         <div class="form-group">
             <label for="page_id">Page ID:</label>
             <input type="text" id="page_id" name="page_id" required value="143528668844641">
@@ -48,17 +54,67 @@
             <label for="access_token">Access Token:</label>
             <input type="text" id="access_token" name="access_token" value="EAFzlgpi4cQMBO6CzRRZAx9LPxBDlRAZC45VTtgMaZBpP3OTp8ZBlFV1uSr33jVo7jTzPespILOMPXWkAHZC5kEMIfoL3Rkz5ZBbtTCxu4eZCNXtZBVCL8yi1hZCFztmWKcRZC4KZCvZCXdwJnuTfnU9jMN5Mw76VXQkPhZCtYzfATATgXySuWqZBIcVzqwoPlDObtn9UkZD" required>
         </div>
+        
         <div class="form-group">
-            <label for="message">Message:</label>
-            <textarea id="message" name="message" rows="4" required>Hello, world!</textarea>
+            <label>Message:</label>
+            <div id="jsonEditor" class="editor-container"></div>
+            <input type="hidden" name="message" id="finalJson">
         </div>
-        <button type="submit">Post to Facebook</button>
+        
+        <button type="submit" onclick="prepareSubmission(event)">Post to Facebook</button>
     </form>
+    
     {% if response %}
     <div class="response">
         <h3>Response:</h3>
         <pre>{{ response }}</pre>
     </div>
     {% endif %}
+
+    <script>
+        let jsonEditor;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('jsonEditor');
+            const options = {
+                mode: 'tree',
+                modes: ['tree', 'view', 'form', 'code', 'text'],
+            };
+            jsonEditor = new JSONEditor(container, options);
+            
+            // Set default value
+            const defaultValue = {
+                request: {
+                    method: "POST",
+                    url: "https://api.example.com/endpoint",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer token123"
+                    },
+                    params: {
+                        "key1": "value1",
+                        "key2": "value2"
+                    },
+                    data: {
+                        "message": "Hello, world!",
+                        "sender": "client"
+                    }
+                },
+                metadata: {
+                    timestamp: new Date().toISOString(),
+                    source: "web-client",
+                    version: "1.0"
+                }
+            };
+            jsonEditor.set(defaultValue);
+        });
+        
+        function prepareSubmission(event) {
+            event.preventDefault();
+            const finalJson = jsonEditor.get();
+            document.getElementById('finalJson').value = JSON.stringify(finalJson);
+            document.getElementById('postForm').submit();
+        }
+    </script>
 </body>
 </html> 
