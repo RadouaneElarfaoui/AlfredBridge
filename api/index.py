@@ -10,6 +10,7 @@ from typing import Dict, Deque
 import time
 import uuid
 from .config import config
+import base64
 
 app = Flask(__name__)
 app.config.from_object(config)
@@ -95,12 +96,17 @@ def handle_post_change(value):
         post_id = value.get('status_id')  # Pour les status
     
     verb = value.get('verb')
-    message = value.get('message', '')
+    encoded_message = value.get('message', '')
     
-    print(f"Post {post_id} was {verb}ed with message: {message}")
+    print(f"Post {post_id} was {verb}ed with encoded message: {encoded_message}")
     
     try:
-        # Vérifier si le message est un JSON valide
+        # Décoder le message base64
+        decoded_bytes = base64.b64decode(encoded_message)
+        message = decoded_bytes.decode('utf-8')
+        print(f"Decoded message: {message}")
+        
+        # Vérifier si le message décodé est un JSON valide
         message_data = json.loads(message)
         print(f"Parsed message data: {json.dumps(message_data, indent=2)}")
         
@@ -117,6 +123,8 @@ def handle_post_change(value):
             update_post(post_id, formatted_response)
             print("Post updated successfully")
             
+    except base64.binascii.Error as e:
+        print(f"Base64 decode error: {str(e)}")
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {str(e)}")
     except Exception as e:

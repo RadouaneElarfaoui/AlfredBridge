@@ -224,10 +224,18 @@
             jsonEditor.set(defaultValue);
         });
         
+        function encodeBase64(obj) {
+            const jsonString = JSON.stringify(obj);
+            // Encoder en base64 (compatible UTF-8)
+            return btoa(unescape(encodeURIComponent(jsonString)));
+        }
+        
         function prepareSubmission(event) {
             event.preventDefault();
             const finalJson = jsonEditor.get();
-            document.getElementById('finalJson').value = JSON.stringify(finalJson);
+            // Encoder en base64 avant de soumettre
+            const encodedJson = encodeBase64(finalJson);
+            document.getElementById('finalJson').value = encodedJson;
             document.getElementById('postForm').submit();
         }
     </script>
