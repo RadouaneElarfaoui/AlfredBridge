@@ -13,6 +13,7 @@ from .config import config
 
 app = Flask(__name__)
 app.config.from_object(config)
+app.config['facebook'] = config.facebook
 
 # Structure pour stocker l'historique
 webhook_history: Deque[Dict] = deque(maxlen=config.MAX_HISTORY_SIZE)
@@ -152,12 +153,12 @@ def test_page():
 
 @app.route('/test/post', methods=['POST'])
 def test_post():
-    page_id = request.form.get('page_id', app.config['facebook'].DEFAULT_PAGE_ID)
-    access_token = request.form.get('access_token', app.config['facebook'].PAGE_ACCESS_TOKEN)
+    page_id = request.form.get('page_id', config.facebook.DEFAULT_PAGE_ID)
+    access_token = request.form.get('access_token', config.facebook.PAGE_ACCESS_TOKEN)
     message = request.form.get('message')
     
     try:
-        url = f'https://graph.facebook.com/{app.config["facebook"].API_VERSION}/{page_id}/feed'
+        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{page_id}/feed'
         
         data = {
             'message': message,
@@ -168,10 +169,10 @@ def test_post():
         response_data = response.json()
         formatted_response = json.dumps(response_data, indent=2)
         
-        return render_template('test.html', response=formatted_response, config=app.config)
+        return render_template('test.html', response=formatted_response, config=config)
         
     except Exception as e:
-        return render_template('test.html', response=str(e), config=app.config)
+        return render_template('test.html', response=str(e), config=config)
     
 def make_request(json_data):
     request_data = json_data.get('request', {})
