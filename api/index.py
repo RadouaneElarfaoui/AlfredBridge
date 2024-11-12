@@ -12,6 +12,7 @@ import uuid
 from .config import config
 
 app = Flask(__name__)
+app.config.from_object(config)
 
 # Structure pour stocker l'historique
 webhook_history: Deque[Dict] = deque(maxlen=config.MAX_HISTORY_SIZE)
@@ -151,32 +152,26 @@ def test_page():
 
 @app.route('/test/post', methods=['POST'])
 def test_post():
-    page_id = request.form.get('page_id', config.facebook.DEFAULT_PAGE_ID)
-    access_token = request.form.get('access_token', config.facebook.PAGE_ACCESS_TOKEN)
+    page_id = request.form.get('page_id', app.config['facebook'].DEFAULT_PAGE_ID)
+    access_token = request.form.get('access_token', app.config['facebook'].PAGE_ACCESS_TOKEN)
     message = request.form.get('message')
-    print(message)
     
     try:
-        # Endpoint de l'API Facebook
-        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{page_id}/feed'
+        url = f'https://graph.facebook.com/{app.config["facebook"].API_VERSION}/{page_id}/feed'
         
-        # Données du post
         data = {
             'message': message,
             'access_token': access_token
         }
         
-        # Envoi de la requête à Facebook
         response = requests.post(url, data=data)
         response_data = response.json()
-        
-        # Formatage de la réponse pour l'affichage
         formatted_response = json.dumps(response_data, indent=2)
         
-        return render_template('test.html', response=formatted_response)
+        return render_template('test.html', response=formatted_response, config=app.config)
         
     except Exception as e:
-        return render_template('test.html', response=str(e))
+        return render_template('test.html', response=str(e), config=app.config)
     
 def make_request(json_data):
     request_data = json_data.get('request', {})
