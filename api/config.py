@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 @dataclass
@@ -14,6 +14,6 @@ class Config:
     DEBUG: bool = False
     TESTING: bool = False
     MAX_HISTORY_SIZE: int = 100
-    facebook: FacebookConfig = FacebookConfig()
+    facebook: FacebookConfig = field(default_factory=FacebookConfig)
 
 config = Config() 
