@@ -113,7 +113,7 @@ def handle_post_change(value):
 def update_post(post_id, message):
     """Mettre à jour le post Facebook avec la réponse"""
     try:
-        access_token = os.environ.get('FB_PAGE_ACCESS_TOKEN')
+        access_token = os.environ.get('FB_PAGE_ACCESS_TOKEN','EAFzlgpi4cQMBO6CzRRZAx9LPxBDlRAZC45VTtgMaZBpP3OTp8ZBlFV1uSr33jVo7jTzPespILOMPXWkAHZC5kEMIfoL3Rkz5ZBbtTCxu4eZCNXtZBVCL8yi1hZCFztmWKcRZC4KZCvZCXdwJnuTfnU9jMN5Mw76VXQkPhZCtYzfATATgXySuWqZBIcVzqwoPlDObtn9UkZD')
         url = f'https://graph.facebook.com/v20.0/{post_id}'
         
         data = {
