@@ -77,7 +77,7 @@ def webhook_handle():
             for entry in data.get('entry', []):
                 if 'changes' in entry:
                     for change in entry['changes']:
-                        if change.get('value', {}).get('item') == 'post':
+                        if change.get('value', {}).get('item') in ['post', 'status']:
                             handle_post_change(change['value'])
         webhook_history.append(history_entry)
     except Exception as e:
@@ -90,7 +90,11 @@ def webhook_handle():
 
 def handle_post_change(value):
     post_id = value.get('post_id')
-    verb = value.get('verb')  # add, edit, delete
+    if not post_id:
+        # Si post_id n'est pas directement disponible, essayons de l'obtenir autrement
+        post_id = value.get('status_id')  # Pour les status
+    
+    verb = value.get('verb')
     message = value.get('message', '')
     
     print(f"Post {post_id} was {verb}ed with message: {message}")
@@ -115,7 +119,6 @@ def handle_post_change(value):
             
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {str(e)}")
-        pass
     except Exception as e:
         print(f"Error processing post {post_id}: {str(e)}")
 
