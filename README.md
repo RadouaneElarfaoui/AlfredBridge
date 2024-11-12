@@ -2,7 +2,7 @@
 
 AlfredBridge agit comme votre majordome digital, gérant élégamment les interactions entre Facebook et vos APIs.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2F[votre-username]%2FAlfredBridge)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRadouaneElarfaoui%2FAlfredBridge)
 ![Python](https://img.shields.io/badge/python-3.9+-blue.svg)
 ![Flask](https://img.shields.io/badge/flask-3.0.3-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
@@ -34,7 +34,7 @@ AlfredBridge agit comme votre majordome digital, gérant élégamment les intera
 
 ### Installation Locale
 ```bash
-git clone https://github.com/[votre-username]/AlfredBridge.git
+git clone https://github.com/RadouaneElarfaoui/AlfredBridge.git
 pip install -r requirements.txt
 vercel dev
 ```
@@ -174,3 +174,5 @@ MIT License - [LICENSE](LICENSE)
 
 ---
 [Documentation Complète](docs/README.md) | [Exemples](docs/EXAMPLES.md) | [Guide API](docs/API.md)
+
+Lien du projet: [https://github.com/RadouaneElarfaoui/AlfredBridge](https://github.com/RadouaneElarfaoui/AlfredBridge)
