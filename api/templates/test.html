@@ -41,6 +41,16 @@
             height: 400px;
             margin-bottom: 20px;
         }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        select:hover {
+            border-color: #1877f2;
+        }
     </style>
 </head>
 <body>
@@ -53,6 +63,18 @@
         <div class="form-group">
             <label for="access_token">Access Token:</label>
             <input type="text" id="access_token" name="access_token" value="EAFzlgpi4cQMBO6CzRRZAx9LPxBDlRAZC45VTtgMaZBpP3OTp8ZBlFV1uSr33jVo7jTzPespILOMPXWkAHZC5kEMIfoL3Rkz5ZBbtTCxu4eZCNXtZBVCL8yi1hZCFztmWKcRZC4KZCvZCXdwJnuTfnU9jMN5Mw76VXQkPhZCtYzfATATgXySuWqZBIcVzqwoPlDObtn9UkZD" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="requestTemplates">Request Templates:</label>
+            <select id="requestTemplates" onchange="loadTemplate(this.value)">
+                <option value="">Select a template...</option>
+                <option value="simple_get">Simple GET Request</option>
+                <option value="post_json">POST with JSON</option>
+                <option value="post_headers">POST with Headers</option>
+                <option value="get_params">GET with Parameters</option>
+                <option value="full_request">Full Request Example</option>
+            </select>
         </div>
         
         <div class="form-group">
@@ -73,6 +95,99 @@
 
     <script>
         let jsonEditor;
+        
+        const templates = {
+            simple_get: {
+                request: {
+                    url: "https://api.example.com/data"
+                },
+                metadata: {
+                    platform: "example",
+                    api_version: "v1"
+                }
+            },
+            post_json: {
+                request: {
+                    method: "POST",
+                    url: "https://api.example.com/data",
+                    data: {
+                        "name": "John Doe",
+                        "email": "john@example.com"
+                    }
+                },
+                metadata: {
+                    platform: "example",
+                    api_version: "v1"
+                }
+            },
+            post_headers: {
+                request: {
+                    method: "POST",
+                    url: "https://api.example.com/secure",
+                    headers: {
+                        "Authorization": "Bearer your-token",
+                        "Content-Type": "application/json"
+                    },
+                    data: {
+                        "message": "Secured request"
+                    }
+                },
+                metadata: {
+                    platform: "example",
+                    api_version: "v1"
+                }
+            },
+            get_params: {
+                request: {
+                    method: "GET",
+                    url: "https://api.example.com/search",
+                    params: {
+                        "q": "search term",
+                        "limit": 10,
+                        "offset": 0
+                    }
+                },
+                metadata: {
+                    platform: "example",
+                    api_version: "v1"
+                }
+            },
+            full_request: {
+                request: {
+                    method: "POST",
+                    url: "https://api.example.com/complete",
+                    headers: {
+                        "Authorization": "Bearer token123",
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    params: {
+                        "version": "2.0",
+                        "format": "json"
+                    },
+                    data: {
+                        "user": {
+                            "name": "John Doe",
+                            "email": "john@example.com"
+                        },
+                        "action": "update",
+                        "timestamp": new Date().toISOString()
+                    }
+                },
+                metadata: {
+                    platform: "example",
+                    api_version: "v1",
+                    source: "web-client",
+                    version: "1.0"
+                }
+            }
+        };
+
+        function loadTemplate(templateName) {
+            if (templateName && templates[templateName]) {
+                jsonEditor.set(templates[templateName]);
+            }
+        }
         
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('jsonEditor');
