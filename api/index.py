@@ -9,11 +9,12 @@ from collections import deque
 from typing import Dict, Deque
 import time
 import uuid
+from config import config
 
 app = Flask(__name__)
 
-# Structure pour stocker l'historique (limité à 100 entrées)
-webhook_history: Deque[Dict] = deque(maxlen=100)
+# Structure pour stocker l'historique
+webhook_history: Deque[Dict] = deque(maxlen=config.MAX_HISTORY_SIZE)
 
 @app.route('/')
 def home():
@@ -25,7 +26,7 @@ def about():
 
 @app.route('/webhook', methods=['GET'])
 def webhook_verify():
-    VERIFY_TOKEN = os.environ.get('FB_VERIFY_TOKEN', 'arf')
+    VERIFY_TOKEN = config.facebook.VERIFY_TOKEN
     print(VERIFY_TOKEN)
 
     
@@ -43,7 +44,7 @@ def webhook_verify():
 
 @app.route('/webhook', methods=['POST'])
 def webhook_handle():
-    app_secret = os.environ.get('FB_APP_SECRET', '850a30f1853fc82acb62c6ec9c875a0b')
+    app_secret = config.facebook.APP_SECRET
     
     signature = request.headers.get('X-Hub-Signature-256')
     if not signature:
@@ -90,22 +91,28 @@ def handle_post_change(value):
     verb = value.get('verb')  # add, edit, delete
     message = value.get('message', '')
     
-    print(f"Post {post_id} was {verb}ed")
+    print(f"Post {post_id} was {verb}ed with message: {message}")
     
     try:
         # Vérifier si le message est un JSON valide
         message_data = json.loads(message)
+        print(f"Parsed message data: {json.dumps(message_data, indent=2)}")
         
         # Vérifier si c'est une structure de requête valide
         if isinstance(message_data, dict) and 'request' in message_data and 'response' not in message_data:
+            print("Valid request structure found, making request...")
             # Faire la requête
             response_data = make_request(message_data)
+            print(f"Got response: {json.dumps(response_data, indent=2)}")
             
             # Mettre à jour le post avec la réponse
-            update_post(post_id, json.dumps(response_data, indent=2))
+            formatted_response = json.dumps(response_data, indent=2)
+            print(f"Updating post {post_id} with response")
+            update_post(post_id, formatted_response)
+            print("Post updated successfully")
             
-    except json.JSONDecodeError:
-        # Le message n'est pas un JSON valide, on ignore
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {str(e)}")
         pass
     except Exception as e:
         print(f"Error processing post {post_id}: {str(e)}")
@@ -113,34 +120,45 @@ def handle_post_change(value):
 def update_post(post_id, message):
     """Mettre à jour le post Facebook avec la réponse"""
     try:
-        access_token = os.environ.get('FB_PAGE_ACCESS_TOKEN','EAFzlgpi4cQMBO6CzRRZAx9LPxBDlRAZC45VTtgMaZBpP3OTp8ZBlFV1uSr33jVo7jTzPespILOMPXWkAHZC5kEMIfoL3Rkz5ZBbtTCxu4eZCNXtZBVCL8yi1hZCFztmWKcRZC4KZCvZCXdwJnuTfnU9jMN5Mw76VXQkPhZCtYzfATATgXySuWqZBIcVzqwoPlDObtn9UkZD')
-        url = f'https://graph.facebook.com/v20.0/{post_id}'
+        access_token = config.facebook.PAGE_ACCESS_TOKEN
+        if not access_token:
+            raise ValueError("PAGE_ACCESS_TOKEN not configured")
+            
+        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{post_id}'
         
         data = {
             'message': message,
             'access_token': access_token
         }
         
+        print(f"Sending update request to {url}")
         response = requests.post(url, data=data)
+        response_data = response.json()
+        print(f"Update response: {json.dumps(response_data, indent=2)}")
+        
         response.raise_for_status()
         
+    except requests.exceptions.RequestException as e:
+        print(f"Request error updating post {post_id}: {str(e)}")
+        if hasattr(e.response, 'json'):
+            print(f"Error response: {json.dumps(e.response.json(), indent=2)}")
     except Exception as e:
         print(f"Error updating post {post_id}: {str(e)}")
 
 @app.route('/test')
 def test_page():
-    return render_template('test.html')
+    return render_template('test.html', config=config)
 
 @app.route('/test/post', methods=['POST'])
 def test_post():
-    page_id = request.form.get('page_id')
-    access_token = request.form.get('access_token')
+    page_id = request.form.get('page_id', config.facebook.DEFAULT_PAGE_ID)
+    access_token = request.form.get('access_token', config.facebook.PAGE_ACCESS_TOKEN)
     message = request.form.get('message')
     print(message)
     
     try:
         # Endpoint de l'API Facebook
-        url = f'https://graph.facebook.com/v20.0/{page_id}/feed'
+        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{page_id}/feed'
         
         # Données du post
         data = {
@@ -283,4 +301,4 @@ def webhook_history_endpoint():
     return json.dumps(response_data, indent=2), 200, {'Content-Type': 'application/json'}
     
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=config.DEBUG)

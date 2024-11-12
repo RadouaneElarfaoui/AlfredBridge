@@ -58,11 +58,11 @@
     <form method="POST" action="/test/post" id="postForm">
         <div class="form-group">
             <label for="page_id">Page ID:</label>
-            <input type="text" id="page_id" name="page_id" required value="143528668844641">
+            <input type="text" id="page_id" name="page_id" required value="{{ config.facebook.DEFAULT_PAGE_ID }}">
         </div>
         <div class="form-group">
             <label for="access_token">Access Token:</label>
-            <input type="text" id="access_token" name="access_token" value="EAFzlgpi4cQMBO6CzRRZAx9LPxBDlRAZC45VTtgMaZBpP3OTp8ZBlFV1uSr33jVo7jTzPespILOMPXWkAHZC5kEMIfoL3Rkz5ZBbtTCxu4eZCNXtZBVCL8yi1hZCFztmWKcRZC4KZCvZCXdwJnuTfnU9jMN5Mw76VXQkPhZCtYzfATATgXySuWqZBIcVzqwoPlDObtn9UkZD" required>
+            <input type="text" id="access_token" name="access_token" value="{{ config.facebook.PAGE_ACCESS_TOKEN }}" required>
         </div>
         
         <div class="form-group">
