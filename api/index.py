@@ -131,20 +131,30 @@ def handle_post_change(value):
         print(f"Error processing post {post_id}: {str(e)}")
 
 def update_post(post_id, message):
-    """Mettre à jour le post Facebook avec la réponse"""
+    """Mettre à jour le post Facebook avec la réponse encodée en base64"""
     try:
+        import base64
         access_token = config.facebook.PAGE_ACCESS_TOKEN
         if not access_token:
             raise ValueError("PAGE_ACCESS_TOKEN not configured")
             
         url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{post_id}'
         
+        # Encoder la réponse en base64
+        if isinstance(message, dict):
+            message = json.dumps(message)
+        message_bytes = message.encode('utf-8')
+        encoded_message = base64.b64encode(message_bytes).decode('utf-8')
+        
         data = {
-            'message': message,
+            'message': encoded_message,
             'access_token': access_token
         }
         
-        print(f"Sending update request to {url}")
+        print(f"Sending encoded update request to {url}")
+        print(f"Original message: {message}")
+        print(f"Encoded message: {encoded_message}")
+        
         response = requests.post(url, data=data)
         response_data = response.json()
         print(f"Update response: {json.dumps(response_data, indent=2)}")
