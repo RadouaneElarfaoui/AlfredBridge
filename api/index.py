@@ -30,6 +30,7 @@ def about():
 
 @app.route('/webhook', methods=['GET'])
 def webhook_verify():
+    print("webhook_verify started...")
     VERIFY_TOKEN = os.getenv('FACEBOOK_VERIFY_TOKEN')
     print(VERIFY_TOKEN)
     
