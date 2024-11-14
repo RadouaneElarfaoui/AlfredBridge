@@ -93,6 +93,8 @@ MAX_HISTORY_SIZE=100
         "url": "https://api.exemple.com/endpoint"
     },
     "metadata": {
+        "type": "command",
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
         "platform": "votre_plateforme",
         "api_version": "v1"
     }
@@ -120,6 +122,8 @@ MAX_HISTORY_SIZE=100
         }
     },
     "metadata": {
+        "type": "command",
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
         "platform": "votre_plateforme",
         "api_version": "v1",
         "source": "web-client"
@@ -131,13 +135,8 @@ MAX_HISTORY_SIZE=100
 - **Champs Obligatoires**:
   - `request.url`: URL de l'API à appeler
   - `request`: Objet parent contenant les détails de la requête
-
-- **Champs Optionnels**:
-  - `method`: Méthode HTTP (GET par défaut)
-  - `headers`: En-têtes HTTP personnalisés
-  - `params`: Paramètres de requête URL (query string)
-  - `data`: Corps de la requête (pour POST/PUT)
-  - `metadata`: Informations supplémentaires
+  - `metadata.type`: Type de message ('command', 'response', 'error')
+  - `metadata.request_id`: Identifiant unique de la requête
 
 ### Format de Réponse
 
@@ -166,13 +165,14 @@ MAX_HISTORY_SIZE=100
         "url": "https://api.exemple.com/endpoint"
     },
     "metadata": {
+        "type": "response",
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
         "platform": "web",
         "api_version": "v1",
         "client_info": {
             "type": "api_client",
             "version": "1.0"
-        },
-        "request_id": "550e8400-e29b-41d4-a716-446655440000"
+        }
     }
 }
 ```
@@ -190,9 +190,10 @@ MAX_HISTORY_SIZE=100
         "url": "https://api.exemple.com/endpoint"
     },
     "metadata": {
+        "type": "error",
+        "request_id": "550e8400-e29b-41d4-a716-446655440000",
         "platform": "web",
-        "api_version": "v1",
-        "request_id": "550e8400-e29b-41d4-a716-446655440000"
+        "api_version": "v1"
     }
 }
 ```
@@ -241,3 +242,8 @@ MIT License - Voir [LICENSE](LICENSE)
 
 ---
 Projet: [https://github.com/RadouaneElarfaoui/AlfredBridge](https://github.com/RadouaneElarfaoui/AlfredBridge)
+
+### Types de Messages
+- `command` : Requête envoyée par l'utilisateur
+- `response` : Réponse du système après traitement réussi
+- `error` : Message d'erreur en cas de problème

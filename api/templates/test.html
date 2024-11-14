@@ -102,6 +102,8 @@
                     url: "https://api.example.com/data"
                 },
                 metadata: {
+                    type: "command",
+                    request_id: crypto.randomUUID(),
                     platform: "example",
                     api_version: "v1"
                 }
@@ -116,6 +118,8 @@
                     }
                 },
                 metadata: {
+                    type: "command",
+                    request_id: crypto.randomUUID(),
                     platform: "example",
                     api_version: "v1"
                 }
@@ -133,6 +137,8 @@
                     }
                 },
                 metadata: {
+                    type: "command",
+                    request_id: crypto.randomUUID(),
                     platform: "example",
                     api_version: "v1"
                 }
@@ -148,6 +154,8 @@
                     }
                 },
                 metadata: {
+                    type: "command",
+                    request_id: crypto.randomUUID(),
                     platform: "example",
                     api_version: "v1"
                 }
@@ -175,6 +183,8 @@
                     }
                 },
                 metadata: {
+                    type: "command",
+                    request_id: crypto.randomUUID(),
                     platform: "example",
                     api_version: "v1",
                     source: "web-client",
@@ -200,25 +210,28 @@
             // Set default value
             const defaultValue = {
                 request: {
-                    method: "POST",
-                    url: "https://api.example.com/endpoint",
+                    method: "GET",
+                    url: "https://fr.wikipedia.org/w/api.php",
                     headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer token123"
+                        "Accept": "application/json",
+                        "User-Agent": "AlfredBridge/1.0"
                     },
                     params: {
-                        "key1": "value1",
-                        "key2": "value2"
-                    },
-                    data: {
-                        "message": "Hello, world!",
-                        "sender": "client"
+                        "action": "query",
+                        "format": "json",
+                        "list": "search",
+                        "srsearch": "dev",
+                        "utf8": 1,
+                        "srlimit": 5
                     }
                 },
                 metadata: {
-                    timestamp: new Date().toISOString(),
-                    source: "web-client",
-                    version: "1.0"
+                    type: "command",
+                    request_id: crypto.randomUUID(),
+                    platform: "web",
+                    api_version: "v1",
+                    source: "test-interface",
+                    timestamp: new Date().toISOString()
                 }
             };
             jsonEditor.set(defaultValue);

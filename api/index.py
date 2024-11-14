@@ -90,45 +90,57 @@ def webhook_handle():
     return 'OK'
 
 def handle_post_change(value):
-    post_id = value.get('post_id')
-    if not post_id:
-        # Si post_id n'est pas directement disponible, essayons de l'obtenir autrement
-        post_id = value.get('status_id')  # Pour les status
-    
+    post_id = value.get('post_id') or value.get('status_id')
     verb = value.get('verb')
     encoded_message = value.get('message', '')
-    
-    print(f"Post {post_id} was {verb}ed with encoded message: {encoded_message}")
     
     try:
         # Décoder le message base64
         decoded_bytes = base64.b64decode(encoded_message)
         message = decoded_bytes.decode('utf-8')
-        print(f"Decoded message: {message}")
-        
-        # Vérifier si le message décodé est un JSON valide
         message_data = json.loads(message)
-        print(f"Parsed message data: {json.dumps(message_data, indent=2)}")
         
-        # Vérifier si c'est une structure de requête valide
-        if isinstance(message_data, dict) and 'request' in message_data and 'response' not in message_data:
-            print("Valid request structure found, making request...")
-            # Faire la requête
+        # Valider la structure du message
+        is_valid, error_message = validate_message_structure(message_data)
+        
+        if not is_valid:
+            error_response = {
+                "error": {
+                    "type": "ValidationError",
+                    "message": error_message,
+                    "timestamp": datetime.datetime.now().isoformat()
+                },
+                "metadata": {
+                    "type": "error",
+                    "request_id": message_data.get('metadata', {}).get('request_id', str(uuid.uuid4())),
+                    "platform": message_data.get('metadata', {}).get('platform', 'unknown'),
+                    "api_version": message_data.get('metadata', {}).get('api_version', 'unknown')
+                }
+            }
+            update_post(post_id, error_response)
+            return
+            
+        # Si c'est une commande valide, traiter la requête
+        if message_data.get('metadata', {}).get('type') == 'command':
             response_data = make_request(message_data)
-            print(f"Got response: {json.dumps(response_data, indent=2)}")
-            
-            # Mettre à jour le post avec la réponse
             formatted_response = json.dumps(response_data, indent=2)
-            print(f"Updating post {post_id} with response")
             update_post(post_id, formatted_response)
-            print("Post updated successfully")
             
-    except base64.binascii.Error as e:
-        print(f"Base64 decode error: {str(e)}")
-    except json.JSONDecodeError as e:
-        print(f"JSON decode error: {str(e)}")
-    except Exception as e:
-        print(f"Error processing post {post_id}: {str(e)}")
+    except (base64.binascii.Error, json.JSONDecodeError, Exception) as e:
+        error_response = {
+            "error": {
+                "type": type(e).__name__,
+                "message": str(e),
+                "timestamp": datetime.datetime.now().isoformat()
+            },
+            "metadata": {
+                "type": "error",
+                "request_id": str(uuid.uuid4()),
+                "platform": "unknown",
+                "api_version": "unknown"
+            }
+        }
+        update_post(post_id, error_response)
 
 def update_post(post_id, message):
     """Mettre à jour le post Facebook avec la réponse encodée en base64"""
@@ -204,6 +216,12 @@ def make_request(json_data):
         raise ValueError("URL is required in request")
     if not metadata.get('request_id'):
         raise ValueError("request_id is required in metadata")
+    if not metadata.get('type'):
+        raise ValueError("type is required in metadata")
+    
+    # Vérification du type
+    if metadata.get('type') not in ['command', 'response', 'error']:
+        raise ValueError("Invalid type in metadata. Must be 'command', 'response', or 'error'")
     
     # Préparation des paramètres de requête avec valeurs par défaut
     request_params = {
@@ -255,7 +273,8 @@ def make_request(json_data):
                 "url": request_params['url']
             },
             "metadata": {
-                "request_id": metadata['request_id'],  # Utilisation du request_id fourni
+                "type": "response",
+                "request_id": metadata['request_id'],
                 "platform": metadata.get('platform', 'unknown'),
                 "api_version": metadata.get('api_version', 'unknown'),
                 "client_info": {
@@ -287,7 +306,8 @@ def make_request(json_data):
             },
             "request": request_params,
             "metadata": {
-                "request_id": metadata['request_id'],  # Utilisation du request_id fourni
+                "type": "error",
+                "request_id": metadata['request_id'],
                 "platform": metadata.get('platform', 'unknown'),
                 "api_version": metadata.get('api_version', 'unknown')
             }
@@ -319,6 +339,35 @@ def webhook_history_endpoint():
     }
     
     return json.dumps(response_data, indent=2), 200, {'Content-Type': 'application/json'}
+    
+def validate_message_structure(message_data):
+    """Valide la structure du message et retourne (is_valid, error_message)"""
+    if not isinstance(message_data, dict):
+        return False, "Message must be a JSON object"
+        
+    # Vérification des champs obligatoires
+    if 'request' not in message_data:
+        return False, "Missing 'request' field"
+        
+    if 'metadata' not in message_data:
+        return False, "Missing 'metadata' field"
+        
+    metadata = message_data.get('metadata', {})
+    if not metadata.get('type'):
+        return False, "Missing 'type' in metadata"
+        
+    if not metadata.get('request_id'):
+        return False, "Missing 'request_id' in metadata"
+        
+    if metadata.get('type') not in ['command', 'response', 'error']:
+        return False, "Invalid type in metadata. Must be 'command', 'response', or 'error'"
+        
+    # Pour une commande, on vérifie que c'est bien une nouvelle requête
+    if metadata.get('type') == 'command':
+        if 'response' in message_data or 'error' in message_data:
+            return False, "Command message should not contain response or error"
+            
+    return True, None
     
 if __name__ == '__main__':
     app.run(debug=os.getenv('DEBUG', 'False'))
