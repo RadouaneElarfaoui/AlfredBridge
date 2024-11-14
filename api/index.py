@@ -182,6 +182,7 @@ def update_post(post_id, message):
 
 @app.route('/test')
 def test_page():
+    import os
     return render_template('test.html', os=os)
 
 @app.route('/test/post', methods=['POST'])
@@ -202,10 +203,10 @@ def test_post():
         response_data = response.json()
         formatted_response = json.dumps(response_data, indent=2)
         
-        return render_template('test.html', response=formatted_response, config=config)
+        return render_template('test.html', response=formatted_response, os=os)
         
     except Exception as e:
-        return render_template('test.html', response=str(e), config=config)
+        return render_template('test.html', response=str(e), os=os)
     
 def make_request(json_data):
     request_data = json_data.get('request', {})
