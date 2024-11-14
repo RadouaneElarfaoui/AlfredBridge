@@ -9,15 +9,16 @@ from collections import deque
 from typing import Dict, Deque
 import time
 import uuid
-from .config import config
 import base64
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement
+load_dotenv()
 
 app = Flask(__name__)
-app.config.from_object(config)
-app.config['facebook'] = config.facebook
 
 # Structure pour stocker l'historique
-webhook_history: Deque[Dict] = deque(maxlen=config.MAX_HISTORY_SIZE)
+webhook_history: Deque[Dict] = deque(maxlen=int(os.getenv('MAX_HISTORY_SIZE', '100')))
 
 @app.route('/')
 def home():
@@ -29,9 +30,8 @@ def about():
 
 @app.route('/webhook', methods=['GET'])
 def webhook_verify():
-    VERIFY_TOKEN = config.facebook.VERIFY_TOKEN
+    VERIFY_TOKEN = os.getenv('FACEBOOK_VERIFY_TOKEN')
     print(VERIFY_TOKEN)
-
     
     mode = request.args.get('hub.mode')
     token = request.args.get('hub.verify_token')
@@ -47,7 +47,7 @@ def webhook_verify():
 
 @app.route('/webhook', methods=['POST'])
 def webhook_handle():
-    app_secret = config.facebook.APP_SECRET
+    app_secret = os.getenv('FACEBOOK_APP_SECRET')
     
     signature = request.headers.get('X-Hub-Signature-256')
     if not signature:
@@ -134,11 +134,11 @@ def update_post(post_id, message):
     """Mettre à jour le post Facebook avec la réponse encodée en base64"""
     try:
         import base64
-        access_token = config.facebook.PAGE_ACCESS_TOKEN
+        access_token = os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN')
         if not access_token:
             raise ValueError("PAGE_ACCESS_TOKEN not configured")
             
-        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{post_id}'
+        url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{post_id}'
         
         # Encoder la réponse en base64
         if isinstance(message, dict):
@@ -170,16 +170,16 @@ def update_post(post_id, message):
 
 @app.route('/test')
 def test_page():
-    return render_template('test.html', config=config)
+    return render_template('test.html', os=os)
 
 @app.route('/test/post', methods=['POST'])
 def test_post():
-    page_id = request.form.get('page_id', config.facebook.DEFAULT_PAGE_ID)
-    access_token = request.form.get('access_token', config.facebook.PAGE_ACCESS_TOKEN)
+    page_id = request.form.get('page_id', os.getenv('FACEBOOK_DEFAULT_PAGE_ID'))
+    access_token = request.form.get('access_token', os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN'))
     message = request.form.get('message')
     
     try:
-        url = f'https://graph.facebook.com/{config.facebook.API_VERSION}/{page_id}/feed'
+        url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{page_id}/feed'
         
         data = {
             'message': message,
@@ -197,10 +197,13 @@ def test_post():
     
 def make_request(json_data):
     request_data = json_data.get('request', {})
+    metadata = json_data.get('metadata', {})
     
-    # Validation basique de la requête
+    # Validation des champs obligatoires
     if not request_data.get('url'):
         raise ValueError("URL is required in request")
+    if not metadata.get('request_id'):
+        raise ValueError("request_id is required in metadata")
     
     # Préparation des paramètres de requête avec valeurs par défaut
     request_params = {
@@ -252,13 +255,13 @@ def make_request(json_data):
                 "url": request_params['url']
             },
             "metadata": {
-                "platform": json_data.get('metadata', {}).get('platform', 'unknown'),
-                "api_version": json_data.get('metadata', {}).get('api_version', 'unknown'),
+                "request_id": metadata['request_id'],  # Utilisation du request_id fourni
+                "platform": metadata.get('platform', 'unknown'),
+                "api_version": metadata.get('api_version', 'unknown'),
                 "client_info": {
                     "type": "api_client",
                     "version": "1.0"
-                },
-                "request_id": str(uuid.uuid4())
+                }
             }
         }
         
@@ -284,9 +287,9 @@ def make_request(json_data):
             },
             "request": request_params,
             "metadata": {
-                "platform": json_data.get('metadata', {}).get('platform', 'unknown'),
-                "api_version": json_data.get('metadata', {}).get('api_version', 'unknown'),
-                "request_id": str(uuid.uuid4())
+                "request_id": metadata['request_id'],  # Utilisation du request_id fourni
+                "platform": metadata.get('platform', 'unknown'),
+                "api_version": metadata.get('api_version', 'unknown')
             }
         }
         return error_structure
@@ -318,4 +321,4 @@ def webhook_history_endpoint():
     return json.dumps(response_data, indent=2), 200, {'Content-Type': 'application/json'}
     
 if __name__ == '__main__':
-    app.run(debug=config.DEBUG)
+    app.run(debug=os.getenv('DEBUG', 'False'))

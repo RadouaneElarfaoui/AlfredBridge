@@ -12,8 +12,8 @@ AlfredBridge agit comme votre majordome digital, gérant élégamment les intera
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Documentation API](#-documentation-api)
-- [Exemples d'Intégration](#-exemples-dintégration)
-- [Contribution](#-contribution)
+- [Sécurité](#-sécurité)
+- [Déploiement](#-déploiement)
 - [Licence](#-licence)
 - [Contact](#-contact)
 
@@ -22,157 +22,222 @@ AlfredBridge agit comme votre majordome digital, gérant élégamment les intera
 - 🤖 Gestion automatisée des webhooks Facebook
 - 🔐 Encodage/décodage sécurisé en base64
 - 🧪 Interface de test interactive
-- 📡 Relais intelligent des messages
+- 📡 Relais intelligent des messages vers vos APIs
+- 📊 Historique des webhooks avec pagination
 - ⚡ Déploiement facile sur Vercel
+
+## 🏗️ Architecture
+
+```mermaid
+graph LR
+    A[Post Facebook] --> B[Webhook]
+    B --> C[Validation Signature]
+    C --> D[Décodage Base64]
+    D --> E[Exécution API]
+    E --> F[Encodage Réponse]
+    F --> G[Mise à jour Post]
+```
 
 ## 🚀 Installation
 
-### Prérequis
-- Python 3.9+
-- Un compte Facebook Developer
-- Un compte Vercel (pour le déploiement)
-
-### Installation Locale
 ```bash
+# Installation
 git clone https://github.com/RadouaneElarfaoui/AlfredBridge.git
+cd AlfredBridge
+
+# Configuration
+cp .env.example .env
+# Éditer .env avec vos identifiants
+
+# Installation des dépendances
 pip install -r requirements.txt
-vercel dev
+
+# Lancement
+flask run
 ```
 
 ## ⚙️ Configuration
 
-1. Configurez votre webhook Facebook avec l'URL de votre application
-2. Modifiez `api/config.py` avec vos identifiants Facebook
+### Variables d'Environnement Requises
+```env
+FACEBOOK_APP_SECRET=your_app_secret
+FACEBOOK_VERIFY_TOKEN=your_verify_token
+FACEBOOK_PAGE_ACCESS_TOKEN=your_page_access_token
+FACEBOOK_API_VERSION=v20.0
+FACEBOOK_DEFAULT_PAGE_ID=your_page_id
+DEBUG=False
+MAX_HISTORY_SIZE=100
+```
+
+### Configuration Facebook
+1. Créez une application sur [Facebook Developers](https://developers.facebook.com)
+2. Activez les Webhooks pour votre Page
+3. Configurez l'URL du webhook avec votre domaine
+4. Utilisez le token de vérification défini dans `.env`
 
 ## 📖 Documentation API
 
-### Endpoints Disponibles
+### Endpoints
 - `GET /webhook` : Validation du webhook Facebook
 - `POST /webhook` : Réception des événements Facebook
-- `GET /test` : Interface de test
-- `GET /webhook/history` : Historique des webhooks reçus
+- `GET /test` : Interface de test interactive
+- `GET /webhook/history` : Historique des webhooks avec pagination
 
-### Processus de Fonctionnement
+### Format de Requête API
 
-1. **Envoi Initial (Utilisateur)**
-   - Préparation de la requête API en JSON
-   - Encodage en base64 de la requête
-   - Envoi du message encodé via Facebook API
-   - Publication sur la page Facebook
-
-2. **Réception Webhook**
-   - Réception sur `/webhook`
-   - Vérification signature Facebook
-   - Stockage dans l'historique
-   - Détection du type de changement (post/comment)
-
-3. **Traitement du Message**
-   - Décodage base64 du message
-   - Validation de la structure JSON
-   - Extraction des paramètres de requête
-   - Vérification des permissions
-
-4. **Exécution de la Requête**
-   - Envoi vers l'API cible
-   - Gestion des timeouts et erreurs
-   - Collecte de la réponse
-   - Formatage du résultat
-
-5. **Réponse et Mise à Jour**
-   - Encodage base64 de la réponse
-   - Mise à jour du post Facebook original
-   - Stockage dans l'historique
-   - Notification de complétion
-
-### Exemple de Flux Complet
-
-1. **Message Initial (Utilisateur → Facebook)**
-```json
-{
-    "message": "eyJyZXF1ZXN0Ijp7Im1ldGhvZCI6IkdFVCIsInVybCI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tIn19"
-}
-```
-
-2. **Réponse Finale (AlfredBridge → Facebook)**
-```json
-{
-    "message": "eyJyZXNwb25zZSI6eyJzdGF0dXMiOjIwMCwiZGF0YSI6eyJyZXN1bHQiOiJzdWNjZXNzIn19fQ=="
-}
-```
-
-## 🔌 Exemples d'Intégration
-
-### APIs Populaires
-
-#### Wikipedia
+#### Format de Base
 ```json
 {
     "request": {
-        "method": "GET",
-        "url": "https://fr.wikipedia.org/w/api.php",
-        "params": {
-            "action": "query",
-            "format": "json",
-            "prop": "extracts",
-            "titles": "Paris",
-            "exintro": true
-        }
+        "method": "GET|POST|PUT|DELETE",
+        "url": "https://api.exemple.com/endpoint"
+    },
+    "metadata": {
+        "platform": "votre_plateforme",
+        "api_version": "v1"
     }
 }
 ```
 
-#### Google Search
+#### Format Complet avec Toutes les Options
 ```json
 {
     "request": {
-        "method": "GET",
-        "url": "https://www.googleapis.com/customsearch/v1",
+        "method": "POST",
+        "url": "https://api.exemple.com/endpoint",
+        "headers": {
+            "Authorization": "Bearer votre_token",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        },
         "params": {
-            "key": "YOUR_API_KEY",
-            "cx": "YOUR_SEARCH_ENGINE_ID",
-            "q": "recherche"
+            "param1": "valeur1",
+            "param2": "valeur2"
+        },
+        "data": {
+            "cle1": "valeur1",
+            "cle2": "valeur2"
         }
+    },
+    "metadata": {
+        "platform": "votre_plateforme",
+        "api_version": "v1",
+        "source": "web-client"
     }
 }
 ```
 
-[Plus d'exemples dans la documentation complète](docs/API-EXAMPLES.md)
+#### Détails des Champs
+- **Champs Obligatoires**:
+  - `request.url`: URL de l'API à appeler
+  - `request`: Objet parent contenant les détails de la requête
 
-### 🔑 Configuration des APIs
+- **Champs Optionnels**:
+  - `method`: Méthode HTTP (GET par défaut)
+  - `headers`: En-têtes HTTP personnalisés
+  - `params`: Paramètres de requête URL (query string)
+  - `data`: Corps de la requête (pour POST/PUT)
+  - `metadata`: Informations supplémentaires
 
-1. **Google APIs**
-   - [Console Google Cloud](https://console.cloud.google.com/)
-   - Activer APIs nécessaires
-   - Créer identifiants
+### Format de Réponse
 
-2. **Autres Services**
-   - [OpenWeatherMap](https://openweathermap.org/api)
-   - [News API](https://newsapi.org/)
-   - [Documentation complète](docs/API-KEYS.md)
+#### Réponse Réussie
+```json
+{
+    "response": {
+        "status": {
+            "code": 200,
+            "reason": "OK"
+        },
+        "headers": {
+            "content-type": "application/json",
+            "server": "nginx"
+        },
+        "data": {
+            "resultat": "données de réponse"
+        },
+        "timing": {
+            "elapsed": "0.234s",
+            "timestamp": "2024-03-14T12:00:00Z"
+        }
+    },
+    "request": {
+        "method": "POST",
+        "url": "https://api.exemple.com/endpoint"
+    },
+    "metadata": {
+        "platform": "web",
+        "api_version": "v1",
+        "client_info": {
+            "type": "api_client",
+            "version": "1.0"
+        },
+        "request_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+}
+```
 
-## 🛠️ Technologies
+#### Réponse d'Erreur
+```json
+{
+    "error": {
+        "type": "ConnectionError",
+        "message": "Failed to establish connection",
+        "timestamp": "2024-03-14T12:00:00Z"
+    },
+    "request": {
+        "method": "POST",
+        "url": "https://api.exemple.com/endpoint"
+    },
+    "metadata": {
+        "platform": "web",
+        "api_version": "v1",
+        "request_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+}
+```
 
-- Flask 3.0.3
-- Python 3.9+
-- Vercel Serverless
+### Important à Noter
+1. **Encodage Base64**: 
+   - Le JSON de requête doit être encodé en base64 avant d'être publié sur Facebook
+   - La réponse sera automatiquement décodée et mise à jour dans le post Facebook
 
-## 🤝 Contribution
+2. **Gestion des Erreurs**:
+   - Toutes les erreurs sont capturées et formatées dans la réponse
+   - Le champ `error.type` indique le type d'erreur rencontrée
+   - Le champ `error.message` fournit des détails sur l'erreur
 
-1. Fork
-2. Créer branche (`feature/NewFeature`)
-3. Commit (`git commit -m 'Add NewFeature'`)
-4. Push (`git push origin feature/NewFeature`)
-5. Pull Request
+3. **Traçabilité**:
+   - Chaque requête reçoit un `request_id` unique
+   - Les timestamps sont inclus pour le suivi temporel
+   - Le temps d'exécution (`elapsed`) est mesuré pour chaque requête
+
+## 🔒 Sécurité
+
+- Validation des signatures webhook Facebook
+- Encodage/décodage base64 des messages
+- Gestion des timeouts et erreurs
+- Validation des données JSON
+- Historique sécurisé des requêtes
+
+## 📦 Déploiement
+
+### Vercel
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FRadouaneElarfaoui%2FAlfredBridge)
+
+### Docker
+```bash
+docker build -t alfredbridge .
+docker run -p 5000:5000 alfredbridge
+```
 
 ## 📝 Licence
 
-MIT License - [LICENSE](LICENSE)
+MIT License - Voir [LICENSE](LICENSE)
 
 ## 📫 Contact
 
-[Votre Nom](https://twitter.com/votre_twitter)
+[Radouane Elarfaoui](https://github.com/RadouaneElarfaoui)
 
 ---
-[Documentation Complète](docs/README.md) | [Exemples](docs/EXAMPLES.md) | [Guide API](docs/API.md)
-
-Lien du projet: [https://github.com/RadouaneElarfaoui/AlfredBridge](https://github.com/RadouaneElarfaoui/AlfredBridge)
+Projet: [https://github.com/RadouaneElarfaoui/AlfredBridge](https://github.com/RadouaneElarfaoui/AlfredBridge)
