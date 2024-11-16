@@ -371,5 +371,172 @@ def validate_message_structure(message_data):
             
     return True, None
     
+# Wiki interface for AlfredBridge API testing
+@app.route('/wiki')
+def wiki_page():
+    return render_template('wiki.html')
+
+def check_post_results(post_id, request_id, max_attempts=5, delay=2):
+    """Vérifie périodiquement les mises à jour du post Facebook"""
+    access_token = os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN')
+    
+    for attempt in range(max_attempts):
+        try:
+            # Récupérer le post Facebook
+            url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{post_id}'
+            response = requests.get(url, params={'access_token': access_token})
+            post_data = response.json()
+            
+            if 'message' in post_data:
+                try:
+                    # Décoder le message base64
+                    decoded_bytes = base64.b64decode(post_data['message'])
+                    message = decoded_bytes.decode('utf-8')
+                    message_data = json.loads(message)
+                    
+                    # Vérifier si c'est une réponse et si elle correspond à notre requête
+                    if (message_data.get('metadata', {}).get('type') == 'response' and 
+                        message_data.get('metadata', {}).get('request_id') == request_id):
+                        return message_data
+                    
+                except (base64.binascii.Error, json.JSONDecodeError):
+                    pass
+            
+            time.sleep(delay)
+        except Exception as e:
+            print(f"Erreur lors de la vérification du post: {str(e)}")
+            time.sleep(delay)
+    
+    return None
+
+@app.route('/wiki/search', methods=['POST'])
+def wiki_search():
+    try:
+        search_term = request.form.get('search')
+        if not search_term:
+            return render_template('wiki.html', error="Veuillez entrer un terme de recherche")
+
+        request_id = str(uuid.uuid4())
+        request_data = {
+            "request": {
+                "method": "GET",
+                "url": "https://fr.wikipedia.org/w/api.php",
+                "params": {
+                    "action": "query",
+                    "format": "json",
+                    "list": "search",
+                    "srsearch": search_term,
+                    "utf8": 1,
+                    "srlimit": 5
+                }
+            },
+            "metadata": {
+                "type": "command",
+                "request_id": request_id,
+                "platform": "web",
+                "api_version": "v1",
+                "source": "wiki-interface"
+            }
+        }
+
+        message_bytes = json.dumps(request_data).encode('utf-8')
+        encoded_message = base64.b64encode(message_bytes).decode('utf-8')
+
+        page_id = os.getenv('FACEBOOK_DEFAULT_PAGE_ID')
+        access_token = os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN')
+        
+        url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{page_id}/feed'
+        
+        response = requests.post(url, data={
+            'message': encoded_message,
+            'access_token': access_token
+        })
+        response_data = response.json()
+        
+        if 'id' not in response_data:
+            return render_template('wiki.html', error="Erreur lors de la publication sur Facebook")
+
+        # Vérifier les résultats
+        results = check_post_results(response_data['id'], request_id)
+        
+        if results and 'response' in results:
+            wiki_results = results['response']['data'].get('query', {}).get('search', [])
+            return render_template('wiki.html', 
+                                post_id=response_data['id'],
+                                search_term=search_term,
+                                results=wiki_results)
+        else:
+            return render_template('wiki.html', 
+                                post_id=response_data['id'],
+                                error="Pas de résultats trouvés")
+
+    except Exception as e:
+        return render_template('wiki.html', error=f"Erreur: {str(e)}")
+    
+@app.route('/wiki/article', methods=['GET'])
+def wiki_article():
+    try:
+        title = request.args.get('title')
+        if not title:
+            return render_template('wiki.html', error="Titre de l'article manquant")
+
+        request_id = str(uuid.uuid4())
+        request_data = {
+            "request": {
+                "method": "GET",
+                "url": "https://fr.wikipedia.org/w/api.php",
+                "params": {
+                    "action": "query",
+                    "format": "json",
+                    "prop": "extracts|info",
+                    "titles": title,
+                    "exintro": 1,
+                    "explaintext": 1,
+                    "inprop": "url",
+                    "utf8": 1
+                }
+            },
+            "metadata": {
+                "type": "command",
+                "request_id": request_id,
+                "platform": "web",
+                "api_version": "v1",
+                "source": "wiki-interface"
+            }
+        }
+
+        message_bytes = json.dumps(request_data).encode('utf-8')
+        encoded_message = base64.b64encode(message_bytes).decode('utf-8')
+
+        page_id = os.getenv('FACEBOOK_DEFAULT_PAGE_ID')
+        access_token = os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN')
+        
+        url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{page_id}/feed'
+        
+        response = requests.post(url, data={
+            'message': encoded_message,
+            'access_token': access_token
+        })
+        response_data = response.json()
+        
+        if 'id' not in response_data:
+            return render_template('article.html', error="Erreur lors de la publication sur Facebook")
+
+        # Vérifier les résultats
+        results = check_post_results(response_data['id'], request_id)
+        
+        if results and 'response' in results:
+            pages = results['response']['data'].get('query', {}).get('pages', {})
+            if pages:
+                page = next(iter(pages.values()))
+                return render_template('article.html', 
+                                    article=page,
+                                    post_id=response_data['id'])
+        
+        return render_template('article.html', error="Article non trouvé")
+
+    except Exception as e:
+        return render_template('article.html', error=f"Erreur: {str(e)}")
+    
 if __name__ == '__main__':
     app.run(debug=os.getenv('DEBUG', 'False'))

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Article Wikipedia</title>
+    <style>
+        body { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .article-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .article-header {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .article-title {
+            color: #1877f2;
+            margin: 0 0 10px 0;
+        }
+        .article-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .article-content {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid red;
+            border-radius: 5px;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #1877f2;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .wiki-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1877f2;
+            text-decoration: none;
+        }
+        .wiki-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <a href="/wiki" class="back-button">← Retour à la recherche</a>
+
+    {% if error %}
+    <div class="error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if article %}
+    <div class="article-container">
+        <div class="article-header">
+            <h1 class="article-title">{{ article.title }}</h1>
+            <div class="article-meta">
+                <span>Longueur: {{ article.length }} caractères</span>
+                {% if article.touched %}
+                <span> | Dernière modification: {{ article.touched }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="article-content">
+            {{ article.extract }}
+        </div>
+
+        {% if article.fullurl %}
+        <a href="{{ article.fullurl }}" target="_blank" class="wiki-link">
+            Lire l'article complet sur Wikipedia →
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if post_id %}
+    <div class="post-info">
+        <p>ID du post Facebook: {{ post_id }}</p>
+    </div>
+    {% endif %}
+</body>
+</html> 
