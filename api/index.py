@@ -11,6 +11,7 @@ import time
 import uuid
 import base64
 from dotenv import load_dotenv
+import markdown2
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -27,6 +28,21 @@ def home():
 @app.route('/about')
 def about():
     return 'About'
+
+@app.route('/docs')
+def docs():
+    # Lire le contenu du README.md
+    readme_path = os.path.join(os.path.dirname(__file__), '..', 'README.md')
+    with open(readme_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Convertir le markdown en HTML
+    html_content = markdown2.markdown(
+        content,
+        extras=['fenced-code-blocks', 'tables', 'header-ids']
+    )
+    
+    return render_template('docs.html', content=html_content)
 
 @app.route('/webhook', methods=['GET'])
 def webhook_verify():

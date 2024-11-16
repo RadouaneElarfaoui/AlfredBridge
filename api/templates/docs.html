@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Documentation AlfredBridge</title>
+    <style>
+        body { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .docs-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background: #f6f8fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 0.9em;
+            color: white;
+            background: #1877f2;
+        }
+        h1, h2, h3 {
+            color: #1877f2;
+        }
+        .nav {
+            position: sticky;
+            top: 20px;
+            float: right;
+            width: 250px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-left: 20px;
+        }
+        .nav ul {
+            list-style: none;
+            padding: 0;
+        }
+        .nav li {
+            margin: 8px 0;
+        }
+        .nav a {
+            color: #1877f2;
+            text-decoration: none;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="docs-container">
+        {{ content | safe }}
+    </div>
+</body>
+</html> 
