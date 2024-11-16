@@ -16,7 +16,7 @@ import markdown2
 # Charger les variables d'environnement
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 # Structure pour stocker l'historique
 webhook_history: Deque[Dict] = deque(maxlen=int(os.getenv('MAX_HISTORY_SIZE', '100')))
