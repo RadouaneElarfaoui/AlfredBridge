@@ -2,3 +2,7 @@ Flask==3.0.3
 requests==2.31.0
 python-dotenv==1.0.0
 markdown2==2.4.12
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.27
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
