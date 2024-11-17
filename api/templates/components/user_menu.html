@@ -1,0 +1,27 @@
+<div class="user-menu" id="userMenu" style="display: none;">
+    <div class="user-info">
+        <div class="user-avatar" id="userAvatar"></div>
+        <span class="user-name" id="userName"></span>
+        <i class="fas fa-chevron-down" style="margin-left: 5px; color: #65676b; font-size: 12px;"></i>
+    </div>
+    <div class="dropdown-menu">
+        <a href="/profile" class="menu-item">
+            <i class="fas fa-user"></i>
+            Mon Profil
+        </a>
+        <a href="/notifications" class="menu-item">
+            <i class="fas fa-bell"></i>
+            Notifications
+            <span class="badge">2</span>
+        </a>
+        <a href="/settings" class="menu-item">
+            <i class="fas fa-cog"></i>
+            Paramètres
+        </a>
+        <hr class="menu-divider">
+        <a href="#" class="menu-item danger" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt"></i>
+            Déconnexion
+        </a>
+    </div>
+</div> 

@@ -142,3 +142,12 @@ def login():
 @token_required
 def logout():
     return jsonify({'message': 'Déconnexion réussie'}), 200 
+
+@auth_bp.route('/verify', methods=['GET'])
+@token_required
+def verify_token(current_user):
+    return jsonify({
+        'id': current_user.id,
+        'email': current_user.email,
+        'name': current_user.name
+    })

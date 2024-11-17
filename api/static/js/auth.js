@@ -171,3 +171,223 @@ async function handleLogin(event) {
         submitButton.textContent = "Se connecter";
     }
 } 
+
+function validateEmailFormat(email) {
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+}
+
+document.getElementById('loginEmail').addEventListener('input', function() {
+    const emailInput = this;
+    const isValid = validateEmailFormat(emailInput.value);
+    emailInput.classList.toggle('invalid', !isValid);
+    
+    if (!isValid) {
+        showFieldError(emailInput, 'Format d\'email invalide');
+    } else {
+        clearFieldError(emailInput);
+    }
+}); 
+
+function updatePasswordStrength(password) {
+    const strength = {
+        0: "Très faible",
+        1: "Faible",
+        2: "Moyen",
+        3: "Fort",
+        4: "Très fort"
+    };
+    
+    let score = 0;
+    if (password.length > 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    return {
+        score: score,
+        text: strength[score]
+    };
+}
+
+function handleRememberMe(token) {
+    if (document.getElementById('rememberMe').checked) {
+        const tokenData = {
+            value: token,
+            expiry: new Date().getTime() + (30 * 24 * 60 * 60 * 1000) // 30 jours
+        };
+        localStorage.setItem('rememberedToken', JSON.stringify(tokenData));
+    }
+}
+
+const errorMessages = {
+    'invalid_credentials': 'Email ou mot de passe incorrect',
+    'account_locked': 'Compte temporairement bloqué. Veuillez réessayer dans quelques minutes',
+    'network_error': 'Problème de connexion. Veuillez vérifier votre connexion internet'
+};
+
+function showFormattedError(errorCode) {
+    const message = errorMessages[errorCode] || 'Une erreur est survenue';
+    showError(message);
+}
+
+// Ajouter ces fonctions avant l'event listener de l'email
+function showFieldError(inputElement, message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'field-error';
+    errorDiv.textContent = message;
+    
+    // Supprimer l'ancien message d'erreur s'il existe
+    clearFieldError(inputElement);
+    
+    // Ajouter le nouveau message d'erreur après l'input
+    inputElement.parentNode.insertBefore(errorDiv, inputElement.nextSibling);
+    inputElement.classList.add('invalid');
+}
+
+function clearFieldError(inputElement) {
+    const existingError = inputElement.parentNode.querySelector('.field-error');
+    if (existingError) {
+        existingError.remove();
+    }
+    inputElement.classList.remove('invalid');
+}
+
+// Ajouter ces styles CSS
+const style = document.createElement('style');
+style.textContent = `
+    .field-error {
+        color: #dc3545;
+        font-size: 0.875em;
+        margin-top: 0.25rem;
+    }
+    
+    .invalid {
+        border-color: #dc3545 !important;
+        background-color: #fff8f8;
+    }
+`;
+document.head.appendChild(style);
+
+// Fonction pour générer une couleur aléatoire cohérente basée sur le nom
+function stringToColor(string) {
+    let hash = 0;
+    for (let i = 0; i < string.length; i++) {
+        hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = '#' + ('00000' + (hash & 0xFFFFFF).toString(16)).slice(-6);
+    return color;
+}
+
+// Fonction pour obtenir les initiales
+function getInitials(name) {
+    return name
+        .split(' ')
+        .map(word => word[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+}
+
+// Mise à jour de la fonction updateUIForLoggedInUser
+function updateUIForLoggedInUser(userData) {
+    const authButtons = document.querySelector('.auth-buttons');
+    const userMenu = document.getElementById('userMenu');
+    const userName = document.getElementById('userName');
+    const userAvatar = document.getElementById('userAvatar');
+
+    if (!authButtons || !userMenu || !userName || !userAvatar) {
+        console.error('Éléments DOM manquants');
+        return;
+    }
+
+    if (userData) {
+        authButtons.style.display = 'none';
+        userMenu.style.display = 'flex';
+        userName.textContent = userData.name;
+        
+        const initials = getInitials(userData.name);
+        const backgroundColor = stringToColor(userData.name);
+        userAvatar.innerHTML = initials;
+        userAvatar.style.backgroundColor = backgroundColor;
+        
+        userMenu.style.opacity = '0';
+        userMenu.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+            userMenu.style.opacity = '1';
+            userMenu.style.transform = 'translateY(0)';
+        }, 50);
+    } else {
+        authButtons.style.display = 'flex';
+        userMenu.style.display = 'none';
+    }
+}
+
+async function checkAuthStatus() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        try {
+            const response = await fetch('/auth/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (response.ok) {
+                const userData = await response.json();
+                updateUIForLoggedInUser(userData);
+                return true;
+            } else {
+                localStorage.removeItem('token');
+                updateUIForLoggedInUser(null);
+                return false;
+            }
+        } catch (error) {
+            console.error('Erreur de vérification:', error);
+            localStorage.removeItem('token');
+            updateUIForLoggedInUser(null);
+            return false;
+        }
+    }
+    updateUIForLoggedInUser(null);
+    return false;
+}
+
+async function handleLogout() {
+    try {
+        const token = localStorage.getItem('token');
+        await fetch('/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        localStorage.removeItem('token');
+        updateUIForLoggedInUser(null);
+        window.location.reload();
+    } catch (error) {
+        console.error('Erreur de déconnexion:', error);
+    }
+}
+
+// Appeler checkAuthStatus au chargement de la page
+document.addEventListener('DOMContentLoaded', checkAuthStatus);
+
+document.addEventListener('DOMContentLoaded', function() {
+    const userAvatar = document.getElementById('userAvatar');
+    const dropdownMenu = document.querySelector('.dropdown-menu');
+    
+    if (userAvatar) {
+        userAvatar.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdownMenu.classList.toggle('show');
+        });
+        
+        // Fermer le menu au clic en dehors
+        document.addEventListener('click', function(e) {
+            if (!dropdownMenu.contains(e.target) && !userAvatar.contains(e.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+    }
+});
