@@ -12,18 +12,27 @@ import uuid
 import base64
 from dotenv import load_dotenv
 import markdown2
+from api.auth import auth_bp
+from api.auth import token_required
+from api.utils import facebook_utils
+from api.models import init_db
 
 # Charger les variables d'environnement
 load_dotenv()
 
 app = Flask(__name__, static_folder='static')
+app.register_blueprint(auth_bp, url_prefix='/auth')
+
+# Initialiser la base de données au démarrage
+init_db()
 
 # Structure pour stocker l'historique
 webhook_history: Deque[Dict] = deque(maxlen=int(os.getenv('MAX_HISTORY_SIZE', '100')))
 
 @app.route('/')
 def home():
-    return 'Hello, World!'
+    # Récupérer le token depuis le localStorage côté client
+    return render_template('home.html', auth_required=False)
 
 @app.route('/about')
 def about():
@@ -134,14 +143,14 @@ def handle_post_change(value):
                     "api_version": message_data.get('metadata', {}).get('api_version', 'unknown')
                 }
             }
-            update_post(post_id, error_response)
+            facebook_utils.update_facebook_post(post_id, error_response)
             return
             
         # Si c'est une commande valide, traiter la requête
         if message_data.get('metadata', {}).get('type') == 'command':
             response_data = make_request(message_data)
             formatted_response = json.dumps(response_data, indent=2)
-            update_post(post_id, formatted_response)
+            facebook_utils.update_facebook_post(post_id, formatted_response)
             
     except (base64.binascii.Error, json.JSONDecodeError, Exception) as e:
         error_response = {
@@ -157,45 +166,7 @@ def handle_post_change(value):
                 "api_version": "unknown"
             }
         }
-        update_post(post_id, error_response)
-
-def update_post(post_id, message):
-    """Mettre à jour le post Facebook avec la réponse encodée en base64"""
-    try:
-        import base64
-        access_token = os.getenv('FACEBOOK_PAGE_ACCESS_TOKEN')
-        if not access_token:
-            raise ValueError("PAGE_ACCESS_TOKEN not configured")
-            
-        url = f'https://graph.facebook.com/{os.getenv("FACEBOOK_API_VERSION")}/{post_id}'
-        
-        # Encoder la réponse en base64
-        if isinstance(message, dict):
-            message = json.dumps(message)
-        message_bytes = message.encode('utf-8')
-        encoded_message = base64.b64encode(message_bytes).decode('utf-8')
-        
-        data = {
-            'message': encoded_message,
-            'access_token': access_token
-        }
-        
-        print(f"Sending encoded update request to {url}")
-        print(f"Original message: {message}")
-        print(f"Encoded message: {encoded_message}")
-        
-        response = requests.post(url, data=data)
-        response_data = response.json()
-        print(f"Update response: {json.dumps(response_data, indent=2)}")
-        
-        response.raise_for_status()
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Request error updating post {post_id}: {str(e)}")
-        if hasattr(e.response, 'json'):
-            print(f"Error response: {json.dumps(e.response.json(), indent=2)}")
-    except Exception as e:
-        print(f"Error updating post {post_id}: {str(e)}")
+        facebook_utils.update_facebook_post(post_id, error_response)
 
 @app.route('/test')
 def test_page():
@@ -333,7 +304,8 @@ def make_request(json_data):
         return error_structure
     
 @app.route('/webhook/history', methods=['GET'])
-def webhook_history_endpoint():
+@token_required
+def webhook_history_endpoint(current_user):
     # Paramètres de pagination
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
@@ -353,7 +325,8 @@ def webhook_history_endpoint():
         'page': page,
         'per_page': per_page,
         'total_pages': (len(webhook_history) + per_page - 1) // per_page,
-        'data': paginated_history
+        'data': paginated_history,
+        'user': current_user.email
     }
     
     return json.dumps(response_data, indent=2), 200, {'Content-Type': 'application/json'}
@@ -554,5 +527,9 @@ def wiki_article():
     except Exception as e:
         return render_template('article.html', error=f"Erreur: {str(e)}")
     
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
+
 if __name__ == '__main__':
     app.run(debug=os.getenv('DEBUG', 'False'))

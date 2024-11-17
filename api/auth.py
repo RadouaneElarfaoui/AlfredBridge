@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from . import models, auth_utils
 from functools import wraps
+import datetime
+import re
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -24,37 +26,89 @@ def token_required(f):
                 algorithms=[auth_utils.ALGORITHM]
             )
             user_id = payload.get("sub")
+            
+            db = get_db()
+            current_user = db.query(models.User).filter(models.User.id == user_id).first()
+            
+            if not current_user:
+                return jsonify({'message': 'Utilisateur non trouvé'}), 404
+                
         except:
             return jsonify({'message': 'Token invalide'}), 401
             
-        return f(*args, **kwargs)
+        return f(current_user, *args, **kwargs)
     return decorated
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
-    db = get_db()
-    
-    if not data or not data.get('email') or not data.get('password'):
-        return jsonify({'message': 'Données manquantes'}), 400
+    try:
+        data = request.get_json()
+        print("Received data:", data)  # Debug: Print the received data
+
+        db = get_db()
         
-    # Vérifier si l'utilisateur existe déjà
-    if db.query(models.User).filter(models.User.email == data['email']).first():
-        return jsonify({'message': 'Email déjà utilisé'}), 400
-    
-    # Créer le nouvel utilisateur
-    hashed_password = auth_utils.get_password_hash(data['password'])
-    new_user = models.User(
-        email=data['email'],
-        password=hashed_password,
-        name=data.get('name')
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    return jsonify({'message': 'Utilisateur créé avec succès'}), 201
+        # Validation des données
+        if not all(key in data for key in ['email', 'password', 'name']):
+            print("Données manquantes")  # Debug: Print missing data error
+            return jsonify({'message': 'Données manquantes'}), 400
+            
+        # Validation du format email
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, data['email']):
+            print("Format d'email invalide")  # Debug: Print invalid email format
+            return jsonify({'message': 'Format d\'email invalide'}), 400
+            
+        # Validation du mot de passe
+        if len(data['password']) < 8:
+            print("Mot de passe trop court")  # Debug: Print password too short
+            return jsonify({'message': 'Le mot de passe doit contenir au moins 8 caractères'}), 400
+        
+        if not re.search(r'[A-Z]', data['password']):
+            print("Mot de passe sans majuscule")  # Debug: Print password missing uppercase
+            return jsonify({'message': 'Le mot de passe doit contenir au moins une majuscule'}), 400
+            
+        if not re.search(r'[a-z]', data['password']):
+            print("Mot de passe sans minuscule")  # Debug: Print password missing lowercase
+            return jsonify({'message': 'Le mot de passe doit contenir au moins une minuscule'}), 400
+            
+        if not re.search(r'\d', data['password']):
+            print("Mot de passe sans chiffre")  # Debug: Print password missing digit
+            return jsonify({'message': 'Le mot de passe doit contenir au moins un chiffre'}), 400
+        
+        # Vérifier si l'email existe déjà
+        if db.query(models.User).filter(models.User.email == data['email']).first():
+            print("Email déjà utilisé")  # Debug: Print email already used
+            return jsonify({'message': 'Cet email est déjà utilisé'}), 400
+        
+        try:
+            # Créer le nouvel utilisateur
+            hashed_password = auth_utils.get_password_hash(data['password'])
+            print("Hashed password:", hashed_password)  # Debug: Print hashed password
+
+            new_user = models.User(
+                email=data['email'],
+                password=hashed_password,
+                name=data['name'],
+                created_at=datetime.datetime.now(datetime.UTC)
+            )
+            
+            db.add(new_user)
+            db.commit()
+            
+            print("Inscription réussie!")  # Debug: Print success message
+            return jsonify({
+                'message': 'Inscription réussie!',
+                'user_id': new_user.id
+            }), 201
+            
+        except Exception as e:
+            db.rollback()
+            print(f"Erreur lors de l'inscription: {str(e)}")  # Debug: Print exception message
+            return jsonify({'message': 'Erreur lors de l\'inscription'}), 500
+            
+    except Exception as e:
+        print(f"Erreur générale: {str(e)}")  # Debug: Print general exception message
+        return jsonify({'message': 'Erreur serveur'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -84,30 +138,7 @@ def login():
         }
     })
 
-@auth_bp.route('/me', methods=['GET'])
+@auth_bp.route('/logout', methods=['POST'])
 @token_required
-def get_current_user():
-    token = request.headers.get('Authorization').split(' ')[1]
-    try:
-        payload = auth_utils.jwt.decode(
-            token, 
-            auth_utils.SECRET_KEY, 
-            algorithms=[auth_utils.ALGORITHM]
-        )
-        user_id = payload.get("sub")
-        
-        db = get_db()
-        user = db.query(models.User).filter(models.User.id == user_id).first()
-        
-        if not user:
-            return jsonify({'message': 'Utilisateur non trouvé'}), 404
-            
-        return jsonify({
-            'id': user.id,
-            'email': user.email,
-            'name': user.name,
-            'emailVerified': user.emailVerified,
-            'image': user.image
-        })
-    except:
-        return jsonify({'message': 'Token invalide'}), 401 
+def logout():
+    return jsonify({'message': 'Déconnexion réussie'}), 200 
