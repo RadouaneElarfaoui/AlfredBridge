@@ -113,7 +113,7 @@
                         <option value="+962">🇯🇴 +962 (Jordanie)</option>
                         <option value="+7">🇰🇿 +7 (Kazakhstan)</option>
                         <option value="+254">🇰🇪 +254 (Kenya)</option>
-                        <option value="+965">🇰🇼 +965 (Koweït)</option>
+                        <option value="+965">����🇸 +965 (Koweït)</option>
                         <option value="+856">🇱🇦 +856 (Laos)</option>
                         <option value="+266">🇱🇸 +266 (Lesotho)</option>
                         <option value="+371">🇱🇻 +371 (Lettonie)</option>
@@ -353,7 +353,8 @@ function closeModal(modalId) {
 
 async function handleLogin(event) {
     event.preventDefault();
-    const email = document.getElementById('loginEmail').value;
+    const countryCode = document.getElementById('loginCountryCode').value;
+    const phone = document.getElementById('loginPhone').value;
     const password = document.getElementById('loginPassword').value;
 
     try {
@@ -362,7 +363,10 @@ async function handleLogin(event) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({
+                phone: countryCode + phone,
+                password
+            }),
         });
 
         const data = await response.json();
@@ -382,7 +386,8 @@ async function handleLogin(event) {
 async function handleRegister(event) {
     event.preventDefault();
     const name = document.getElementById('registerName').value;
-    const email = document.getElementById('registerEmail').value;
+    const countryCode = document.getElementById('registerCountryCode').value;
+    const phone = document.getElementById('registerPhone').value;
     const password = document.getElementById('registerPassword').value;
 
     try {
@@ -391,7 +396,11 @@ async function handleRegister(event) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({
+                name,
+                phone: countryCode + phone,
+                password
+            }),
         });
 
         const data = await response.json();

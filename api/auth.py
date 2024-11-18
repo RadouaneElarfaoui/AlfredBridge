@@ -6,8 +6,11 @@ from functools import wraps
 import datetime
 import re
 from api.validators import validate_phone
+from api.services.whatsapp import WhatsAppService
+from uuid import UUID
 
 auth_bp = Blueprint('auth', __name__)
+whatsapp_service = WhatsAppService()
 
 def get_db():
     return next(models.get_db())
@@ -119,3 +122,55 @@ def verify_token(current_user):
         'created_at': current_user.created_at.isoformat() if current_user.created_at else None,
         'updated_at': current_user.updated_at.isoformat() if current_user.updated_at else None
     })
+
+@auth_bp.route('/send-verification', methods=['POST'])
+@token_required
+def send_verification(current_user):
+    if current_user.is_phone_verified:
+        return jsonify({'message': 'Numéro déjà vérifié'}), 400
+        
+    # Générer un nouveau code
+    code = whatsapp_service.generate_verification_code()
+    expiration = datetime.utcnow() + timedelta(minutes=10)
+    
+    # Mettre à jour l'utilisateur
+    db = get_db()
+    current_user.verification_code = code
+    current_user.verification_code_expires = expiration
+    db.commit()
+    
+    # Envoyer le code par WhatsApp
+    success = whatsapp_service.send_verification_code(current_user.phone, code)
+    
+    if success:
+        return jsonify({'message': 'Code de vérification envoyé'}), 200
+    return jsonify({'message': 'Erreur lors de l\'envoi du code'}), 500
+
+@auth_bp.route('/verify-phone', methods=['POST'])
+@token_required
+def verify_phone(current_user):
+    data = request.get_json()
+    code = data.get('code')
+    
+    if not code:
+        return jsonify({'message': 'Code requis'}), 400
+        
+    if current_user.is_phone_verified:
+        return jsonify({'message': 'Numéro déjà vérifié'}), 400
+        
+    if (not current_user.verification_code or 
+        not current_user.verification_code_expires or 
+        datetime.utcnow() > current_user.verification_code_expires):
+        return jsonify({'message': 'Code expiré'}), 400
+        
+    if code != current_user.verification_code:
+        return jsonify({'message': 'Code incorrect'}), 400
+        
+    # Valider le numéro
+    db = get_db()
+    current_user.is_phone_verified = True
+    current_user.verification_code = None
+    current_user.verification_code_expires = None
+    db.commit()
+    
+    return jsonify({'message': 'Numéro vérifié avec succès'}), 200

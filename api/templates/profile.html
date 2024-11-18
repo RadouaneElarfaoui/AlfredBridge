@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <h1>Mon Profil</h1>
+    </div>
+
+    <div class="profile-sections">
+        <!-- Section Informations Personnelles -->
+        <div class="profile-section" id="personal-info">
+            <h2>Informations Personnelles</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Nom complet</label>
+                    <p>{{ current_user.name }}</p>
+                </div>
+                <div class="info-item">
+                    <label>Numéro de téléphone</label>
+                    <div class="phone-status">
+                        <p>{{ current_user.phone }}</p>
+                        {% if current_user.is_phone_verified %}
+                            <span class="verified-badge">✓ Vérifié</span>
+                        {% else %}
+                            <div class="verification-needed">
+                                <span class="unverified-badge">Non vérifié</span>
+                                <button onclick="sendVerificationCode()" class="verify-button">
+                                    Vérifier maintenant
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="info-item">
+                    <label>Compte créé le</label>
+                    <p>{{ current_user.created_at.strftime('%d/%m/%Y') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.profile-header {
+    margin-bottom: 2rem;
+}
+
+.profile-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.info-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+}
+
+.phone-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.verified-badge {
+    background: #28a745;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+}
+
+.unverified-badge {
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+}
+
+.verification-needed {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.verify-button {
+    background: #1877f2;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.verify-button:hover {
+    background: #1464d9;
+}
+</style>
+{% endblock %} 

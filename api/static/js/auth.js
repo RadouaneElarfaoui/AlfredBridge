@@ -573,3 +573,13 @@ document.getElementById('registerCountryCode').addEventListener('change', functi
     }
 });
 
+function clearForm(formId) {
+    document.getElementById(formId).reset();
+    document.querySelector(`#${formId} .error-message`).style.display = 'none';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    clearForm(modalId === 'loginModal' ? 'loginForm' : 'registerForm');
+}
+
