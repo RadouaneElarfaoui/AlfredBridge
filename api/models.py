@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+from sqlalchemy.sql import func
 
 load_dotenv()
 
@@ -33,12 +34,15 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(20), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<User(name='{self.name}', phone='{self.phone}')>"
 
 # Créer les tables
 def init_db():

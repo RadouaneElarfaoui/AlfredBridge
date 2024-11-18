@@ -5,6 +5,7 @@ from . import models, auth_utils
 from functools import wraps
 import datetime
 import re
+from api.validators import validate_phone
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -41,87 +42,52 @@ def token_required(f):
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
+    data = request.get_json()
+    db = get_db()
+    
+    if not all(key in data for key in ['name', 'phone', 'password']):
+        return jsonify({'message': 'Données manquantes'}), 400
+    
+    # Nettoyage et validation du numéro de téléphone
+    phone = data['phone'].replace(' ', '')
+    if not validate_phone(phone):
+        return jsonify({'message': 'Format de numéro de téléphone invalide'}), 400
+    
+    # Vérification si le numéro existe déjà
+    if db.query(models.User).filter(models.User.phone == phone).first():
+        return jsonify({'message': 'Ce numéro de téléphone est déjà utilisé'}), 400
+    
+    # Création du nouvel utilisateur
+    hashed_password = auth_utils.get_password_hash(data['password'])
+    new_user = models.User(
+        name=data['name'],
+        phone=phone,
+        password=hashed_password
+    )
+    
     try:
-        data = request.get_json()
-        print("Received data:", data)  # Debug: Print the received data
-
-        db = get_db()
-        
-        # Validation des données
-        if not all(key in data for key in ['email', 'password', 'name']):
-            print("Données manquantes")  # Debug: Print missing data error
-            return jsonify({'message': 'Données manquantes'}), 400
-            
-        # Validation du format email
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, data['email']):
-            print("Format d'email invalide")  # Debug: Print invalid email format
-            return jsonify({'message': 'Format d\'email invalide'}), 400
-            
-        # Validation du mot de passe
-        if len(data['password']) < 8:
-            print("Mot de passe trop court")  # Debug: Print password too short
-            return jsonify({'message': 'Le mot de passe doit contenir au moins 8 caractères'}), 400
-        
-        if not re.search(r'[A-Z]', data['password']):
-            print("Mot de passe sans majuscule")  # Debug: Print password missing uppercase
-            return jsonify({'message': 'Le mot de passe doit contenir au moins une majuscule'}), 400
-            
-        if not re.search(r'[a-z]', data['password']):
-            print("Mot de passe sans minuscule")  # Debug: Print password missing lowercase
-            return jsonify({'message': 'Le mot de passe doit contenir au moins une minuscule'}), 400
-            
-        if not re.search(r'\d', data['password']):
-            print("Mot de passe sans chiffre")  # Debug: Print password missing digit
-            return jsonify({'message': 'Le mot de passe doit contenir au moins un chiffre'}), 400
-        
-        # Vérifier si l'email existe déjà
-        if db.query(models.User).filter(models.User.email == data['email']).first():
-            print("Email déjà utilisé")  # Debug: Print email already used
-            return jsonify({'message': 'Cet email est déjà utilisé'}), 400
-        
-        try:
-            # Créer le nouvel utilisateur
-            hashed_password = auth_utils.get_password_hash(data['password'])
-            print("Hashed password:", hashed_password)  # Debug: Print hashed password
-
-            new_user = models.User(
-                email=data['email'],
-                password=hashed_password,
-                name=data['name'],
-                created_at=datetime.datetime.now(datetime.UTC)
-            )
-            
-            db.add(new_user)
-            db.commit()
-            
-            print("Inscription réussie!")  # Debug: Print success message
-            return jsonify({
-                'message': 'Inscription réussie!',
-                'user_id': new_user.id
-            }), 201
-            
-        except Exception as e:
-            db.rollback()
-            print(f"Erreur lors de l'inscription: {str(e)}")  # Debug: Print exception message
-            return jsonify({'message': 'Erreur lors de l\'inscription'}), 500
-            
+        db.add(new_user)
+        db.commit()
+        return jsonify({'message': 'Inscription réussie'}), 201
     except Exception as e:
-        print(f"Erreur générale: {str(e)}")  # Debug: Print general exception message
-        return jsonify({'message': 'Erreur serveur'}), 500
+        db.rollback()
+        return jsonify({'message': 'Erreur lors de l\'inscription'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     db = get_db()
     
-    if not data or not data.get('email') or not data.get('password'):
+    if not data or not data.get('phone') or not data.get('password'):
         return jsonify({'message': 'Données manquantes'}), 400
     
-    user = db.query(models.User).filter(models.User.email == data['email']).first()
+    # Nettoyage du numéro de téléphone
+    phone = data['phone'].replace(' ', '')
+    
+    user = db.query(models.User).filter(models.User.phone == phone).first()
     
     if not user or not auth_utils.verify_password(data['password'], user.password):
-        return jsonify({'message': 'Email ou mot de passe incorrect'}), 401
+        return jsonify({'message': 'Numéro de téléphone ou mot de passe incorrect'}), 401
     
     access_token = auth_utils.create_access_token(
         data={"sub": str(user.id)},
@@ -133,8 +99,8 @@ def login():
         'token_type': 'bearer',
         'user': {
             'id': user.id,
-            'email': user.email,
-            'name': user.name
+            'name': user.name,
+            'phone': user.phone
         }
     })
 
@@ -148,6 +114,8 @@ def logout():
 def verify_token(current_user):
     return jsonify({
         'id': current_user.id,
-        'email': current_user.email,
-        'name': current_user.name
+        'name': current_user.name,
+        'phone': current_user.phone,
+        'created_at': current_user.created_at.isoformat() if current_user.created_at else None,
+        'updated_at': current_user.updated_at.isoformat() if current_user.updated_at else None
     })

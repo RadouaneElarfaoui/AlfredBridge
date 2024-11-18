@@ -16,6 +16,8 @@ from api.auth import auth_bp
 from api.auth import token_required
 from api.utils import facebook_utils
 from api.models import init_db
+from sqlalchemy import inspect
+import sys
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -24,7 +26,11 @@ app = Flask(__name__, static_folder='static')
 app.register_blueprint(auth_bp, url_prefix='/auth')
 
 # Initialiser la base de données au démarrage
-init_db()
+try:
+    init_db()
+except Exception as e:
+    print(f"Erreur fatale lors de l'initialisation de la DB: {e}")
+    sys.exit(1)  # Arrêter l'application si la DB n'est pas accessible
 
 # Structure pour stocker l'historique
 webhook_history: Deque[Dict] = deque(maxlen=int(os.getenv('MAX_HISTORY_SIZE', '100')))

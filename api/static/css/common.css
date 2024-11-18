@@ -237,4 +237,72 @@ body {
     padding: 2px 6px;
     border-radius: 10px;
     margin-left: auto;
+}
+
+/* Style pour l'input téléphone */
+.phone-input-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.country-code {
+    width: 120px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: white;
+    font-size: 14px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23333' viewBox='0 0 12 12'%3E%3Cpath d='M6 8.825L1.175 4 2.238 2.938 6 6.7l3.763-3.763L10.825 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 24px;
+    transition: all 0.3s ease;
+}
+
+.country-code:hover {
+    border-color: #1877f2;
+}
+
+.country-code option:checked {
+    background-color: #e7f3ff;
+}
+
+.country-code option {
+    padding: 8px;
+    font-size: 14px;
+}
+
+.country-code:focus {
+    outline: none;
+    border-color: #1877f2;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+}
+
+input[type="tel"] {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Validation visuelle */
+input[type="tel"]:valid {
+    border-color: #28a745;
+}
+
+input[type="tel"]:invalid {
+    border-color: #dc3545;
+}
+
+.phone-hint {
+    font-size: 0.875em;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+/* Style pour le conteneur du téléphone */
+.phone-input-container:focus-within {
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.1);
 } 

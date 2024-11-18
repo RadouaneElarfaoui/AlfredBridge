@@ -1,9 +1,9 @@
 async function handleRegister(event) {
     event.preventDefault();
-    console.log("Formulaire soumis"); // Debug
-
+    
     const nameInput = document.getElementById('registerName');
-    const emailInput = document.getElementById('registerEmail');
+    const phoneInput = document.getElementById('registerPhone');
+    const countryCode = document.getElementById('registerCountryCode');
     const passwordInput = document.getElementById('registerPassword');
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const errorDiv = document.getElementById('registerError');
@@ -13,9 +13,25 @@ async function handleRegister(event) {
     errorDiv.textContent = '';
     errorDiv.style.display = 'none';
 
+    // Validation du téléphone
+    const phoneValidation = validatePhoneNumber(phoneInput.value, countryCode.value);
+    if (!phoneValidation.isValid) {
+        showError(phoneValidation.message);
+        return;
+    }
+
+    // Formatage du numéro complet
+    const fullPhoneNumber = countryCode.value + phoneInput.value.replace(/\s+/g, '');
+
     // Validation des mots de passe
     if (passwordInput.value !== confirmPasswordInput.value) {
         showError("Les mots de passe ne correspondent pas");
+        return;
+    }
+
+    const passwordErrors = validatePassword(passwordInput.value);
+    if (passwordErrors.length > 0) {
+        showError(passwordErrors.join('\n'));
         return;
     }
 
@@ -24,7 +40,6 @@ async function handleRegister(event) {
     submitButton.textContent = 'Inscription en cours...';
 
     try {
-        console.log("Envoi de la requête..."); // Debug
         const response = await fetch('/auth/register', {
             method: 'POST',
             headers: {
@@ -32,12 +47,11 @@ async function handleRegister(event) {
             },
             body: JSON.stringify({
                 name: nameInput.value.trim(),
-                email: emailInput.value.trim(),
+                phone: fullPhoneNumber,
                 password: passwordInput.value
             }),
         });
 
-        console.log("Réponse reçue:", response.status); // Debug
         const data = await response.json();
 
         if (response.ok) {
@@ -50,7 +64,7 @@ async function handleRegister(event) {
             showError(data.message || "Erreur lors de l'inscription");
         }
     } catch (error) {
-        console.error("Erreur:", error); // Debug
+        console.error("Erreur:", error);
         showError("Erreur de connexion au serveur");
     } finally {
         submitButton.disabled = false;
@@ -126,9 +140,40 @@ function validatePassword(password) {
     return errors;
 }
 
+function validatePhoneNumber(phone, countryCode) {
+    // Nettoyer le numéro
+    phone = phone.replace(/\s+/g, '');
+    
+    const phonePatterns = {
+        '+212': {
+            pattern: /^[67][0-9]{8}$/,
+            errorMsg: 'Le numéro doit commencer par 6 ou 7 et contenir 9 chiffres'
+        },
+        '+33': {
+            pattern: /^[67][0-9]{8}$/,
+            errorMsg: 'Le numéro doit commencer par 6 ou 7 et contenir 9 chiffres'
+        },
+        '+1': {
+            pattern: /^[2-9][0-9]{9}$/,
+            errorMsg: 'Le numéro doit contenir 10 chiffres et ne pas commencer par 0 ou 1'
+        },
+        'default': {
+            pattern: /^[0-9]{6,15}$/,
+            errorMsg: 'Le numéro doit contenir entre 6 et 15 chiffres'
+        }
+    };
+    
+    const validation = phonePatterns[countryCode] || phonePatterns.default;
+    return {
+        isValid: validation.pattern.test(phone),
+        message: validation.errorMsg
+    };
+}
+
 async function handleLogin(event) {
     event.preventDefault();
-    const emailInput = document.getElementById('loginEmail');
+    const countryCode = document.getElementById('loginCountryCode').value;
+    const phoneInput = document.getElementById('loginPhone');
     const passwordInput = document.getElementById('loginPassword');
     const errorDiv = document.getElementById('loginError');
     const submitButton = document.getElementById('loginSubmit');
@@ -136,6 +181,15 @@ async function handleLogin(event) {
     // Réinitialisation des erreurs
     errorDiv.textContent = '';
     errorDiv.style.display = 'none';
+
+    // Validation du numéro de téléphone
+    if (!validatePhoneNumber(phoneInput.value, countryCode)) {
+        showError("Format de numéro de téléphone invalide");
+        return;
+    }
+
+    // Formatage du numéro complet avec l'indicatif
+    const fullPhoneNumber = countryCode + phoneInput.value;
 
     // Désactiver le bouton
     submitButton.disabled = true;
@@ -148,7 +202,7 @@ async function handleLogin(event) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                email: emailInput.value.trim(),
+                phone: fullPhoneNumber,
                 password: passwordInput.value
             }),
         });
@@ -170,24 +224,7 @@ async function handleLogin(event) {
         submitButton.disabled = false;
         submitButton.textContent = "Se connecter";
     }
-} 
-
-function validateEmailFormat(email) {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
 }
-
-document.getElementById('loginEmail').addEventListener('input', function() {
-    const emailInput = this;
-    const isValid = validateEmailFormat(emailInput.value);
-    emailInput.classList.toggle('invalid', !isValid);
-    
-    if (!isValid) {
-        showFieldError(emailInput, 'Format d\'email invalide');
-    } else {
-        clearFieldError(emailInput);
-    }
-}); 
 
 function updatePasswordStrength(password) {
     const strength = {
@@ -322,35 +359,38 @@ function updateUIForLoggedInUser(userData) {
         userMenu.style.display = 'none';
     }
 }
-
 async function checkAuthStatus() {
     const token = localStorage.getItem('token');
-    if (token) {
-        try {
-            const response = await fetch('/auth/verify', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            if (response.ok) {
-                const userData = await response.json();
-                updateUIForLoggedInUser(userData);
-                return true;
-            } else {
-                localStorage.removeItem('token');
-                updateUIForLoggedInUser(null);
-                return false;
+    if (!token) {
+        updateUIForLoggedInUser(null);
+        return;
+    }
+
+    try {
+        const response = await fetch('/auth/verify', {
+            headers: {
+                'Authorization': `Bearer ${token}`
             }
-        } catch (error) {
-            console.error('Erreur de vérification:', error);
+        });
+
+        if (response.ok) {
+            const userData = await response.json();
+            updateUIForLoggedInUser({
+                id: userData.id,
+                name: userData.name,
+                phone: userData.phone,
+                created_at: userData.created_at,
+                updated_at: userData.updated_at
+            });
+        } else {
             localStorage.removeItem('token');
             updateUIForLoggedInUser(null);
-            return false;
         }
+    } catch (error) {
+        console.error('Erreur de vérification:', error);
+        localStorage.removeItem('token');
+        updateUIForLoggedInUser(null);
     }
-    updateUIForLoggedInUser(null);
-    return false;
 }
 
 async function handleLogout() {
@@ -391,3 +431,145 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Ajout de la validation en temps réel
+document.getElementById('loginPhone').addEventListener('input', function() {
+    const isValid = validatePhoneNumber(this.value);
+    this.classList.toggle('invalid', !isValid);
+    this.classList.toggle('valid', isValid);
+});
+
+// Ajout de la validation en temps réel pour le téléphone
+document.addEventListener('DOMContentLoaded', function() {
+    const registerPhone = document.getElementById('registerPhone');
+    const registerCountryCode = document.getElementById('registerCountryCode');
+    
+    if (registerPhone && registerCountryCode) {
+        registerPhone.addEventListener('input', function() {
+            const isValid = validatePhoneNumber(this.value, registerCountryCode.value);
+            this.classList.toggle('invalid', !isValid);
+            this.classList.toggle('valid', isValid);
+        });
+        
+        registerCountryCode.addEventListener('change', function() {
+            const isValid = validatePhoneNumber(registerPhone.value, this.value);
+            registerPhone.classList.toggle('invalid', !isValid);
+            registerPhone.classList.toggle('valid', isValid);
+        });
+    }
+});
+
+function updatePhoneHint(countryCode) {
+    const hints = {
+        '+212': 'Format: 6XXXXXXXX ou 7XXXXXXXX (Maroc)',
+        '+33': 'Format: 06XXXXXXXX ou 07XXXXXXXX (France)',
+        '+1': 'Format: (XXX) XXX-XXXX (USA/Canada)',
+        'default': 'Format international'
+    };
+    
+    const hintElement = document.querySelector('.phone-hint');
+    if (hintElement) {
+        hintElement.textContent = hints[countryCode] || hints.default;
+    }
+}
+
+// Ajouter au DOMContentLoaded
+document.getElementById('registerCountryCode').addEventListener('change', function() {
+    updatePhoneHint(this.value);
+    // Revalider le numéro si un numéro est déjà saisi
+    const phoneInput = document.getElementById('registerPhone');
+    if (phoneInput.value) {
+        const validation = validatePhoneNumber(phoneInput.value, this.value);
+        phoneInput.classList.toggle('invalid', !validation.isValid);
+        phoneInput.classList.toggle('valid', validation.isValid);
+    }
+});
+
+const PHONE_PATTERNS = {
+    '+212': {
+        pattern: /^[67][0-9]{8}$/,
+        format: 'XXXXXXXXX',
+        example: '612345678',
+        errorMsg: 'Le numéro doit commencer par 6 ou 7 et contenir 9 chiffres'
+    },
+    '+33': {
+        pattern: /^[67][0-9]{8}$/,
+        format: 'X XX XX XX XX',
+        example: '612345678',
+        errorMsg: 'Le numéro doit commencer par 6 ou 7 et contenir 9 chiffres'
+    },
+    '+1': {
+        pattern: /^[2-9][0-9]{9}$/,
+        format: '(XXX) XXX-XXXX',
+        example: '2123456789',
+        errorMsg: 'Le numéro doit contenir 10 chiffres et ne pas commencer par 0 ou 1'
+    },
+    '+44': {
+        pattern: /^[7][0-9]{9}$/,
+        format: 'XXXX XXX XXX',
+        example: '7123456789',
+        errorMsg: 'Le numéro doit commencer par 7 et contenir 10 chiffres'
+    },
+    '+49': {
+        pattern: /^[15][0-9]{9,10}$/,
+        format: 'XXXX XXXXXXX',
+        example: '1512345678',
+        errorMsg: 'Le numéro doit commencer par 1 ou 5 et contenir 10-11 chiffres'
+    },
+    'default': {
+        pattern: /^[0-9]{6,15}$/,
+        format: 'X'.repeat(15),
+        example: '123456789',
+        errorMsg: 'Le numéro doit contenir entre 6 et 15 chiffres'
+    }
+};
+
+function formatPhoneNumber(phone, countryCode) {
+    const pattern = PHONE_PATTERNS[countryCode] || PHONE_PATTERNS.default;
+    const cleaned = phone.replace(/\D/g, '');
+    
+    if (!pattern.format) return cleaned;
+    
+    let formatted = pattern.format;
+    let digitIndex = 0;
+    
+    return pattern.format.replace(/X/g, () => cleaned[digitIndex++] || '');
+}
+
+function validateAndFormatPhone(input, countryCode) {
+    const pattern = PHONE_PATTERNS[countryCode] || PHONE_PATTERNS.default;
+    const cleaned = input.value.replace(/\D/g, '');
+    
+    // Validation
+    const isValid = pattern.pattern.test(cleaned);
+    input.classList.toggle('valid', isValid);
+    input.classList.toggle('invalid', !isValid);
+    
+    // Formatage
+    if (cleaned) {
+        input.value = formatPhoneNumber(cleaned, countryCode);
+    }
+    
+    return isValid;
+}
+
+document.getElementById('registerPhone').addEventListener('input', function(e) {
+    const countryCode = document.getElementById('registerCountryCode').value;
+    validateAndFormatPhone(this, countryCode);
+});
+
+document.getElementById('registerCountryCode').addEventListener('change', function() {
+    const phoneInput = document.getElementById('registerPhone');
+    const pattern = PHONE_PATTERNS[this.value] || PHONE_PATTERNS.default;
+    
+    // Mise à jour du placeholder et de l'exemple
+    phoneInput.placeholder = pattern.format;
+    document.querySelector('.phone-hint').textContent = 
+        `Format: ${pattern.format} (ex: ${pattern.example})`;
+    
+    // Reformater le numéro existant si nécessaire
+    if (phoneInput.value) {
+        validateAndFormatPhone(phoneInput, this.value);
+    }
+});
+
